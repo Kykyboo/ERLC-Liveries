@@ -25,6 +25,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- html2canvas for PNG export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 8px; }
@@ -46,7 +48,7 @@
                 </div>
                 <div>
                     <h1 class="text-base font-bold tracking-wide text-white">ERLC Livery Hub</h1>
-                    <p class="text-xs text-zinc-400">Beheer je Emergency Response Liberty County codes</p>
+                    <p class="text-xs text-zinc-400">Beheer & Exporteer je Emergency Response Liberty County codes</p>
                 </div>
             </div>
             <div class="flex items-center space-x-3">
@@ -184,6 +186,25 @@
                 <button type="button" onclick="saveLivery()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">
                     Opslaan
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Export Card Template (for generating PNG with html2canvas) -->
+    <div id="exportCardWrapper" style="position: absolute; left: -9999px; top: -9999px;">
+        <div id="exportCardContent" class="w-[500px] bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl p-6 text-white font-sans">
+            <div class="flex items-center space-x-3 mb-4">
+                <div id="exportCardColorBadge" class="w-6 h-6 rounded-full border border-white/20 shrink-0"></div>
+                <div>
+                    <h2 id="exportCardTitle" class="text-xl font-bold">Voertuig Titel</h2>
+                    <p class="text-xs text-zinc-400">ERLC Livery Hub - Just Kyan Style</p>
+                </div>
+            </div>
+            <div id="exportCardImageContainer" class="w-full h-56 rounded-xl overflow-hidden border border-zinc-800 mb-4 bg-zinc-950">
+                <img id="exportCardImg" src="" class="w-full h-full object-cover" crossorigin="anonymous">
+            </div>
+            <div class="space-y-2" id="exportCardCodesList">
+                <!-- Codes injected here -->
             </div>
         </div>
     </div>
@@ -421,6 +442,91 @@
             }
         }
 
+        // EXPORT FUNCTIONS: PNG & TXT
+        function exportLiveryTxt(id) {
+            const livery = liveries.find(l => l.id === id);
+            if (!livery) return;
+
+            let content = `=== ERLC LIVERY CODES ===\n`;
+            content += `Titel: ${livery.title}\n`;
+            content += `Voertuig Kleur: ${livery.vehicleColor || 'Onbekend'}\n`;
+            content += `Laatst gewijzigd: ${livery.updatedAt || 'Onbekend'}\n`;
+            content += `----------------------------------------\n\n`;
+            
+            if (livery.codes && livery.codes.length > 0) {
+                livery.codes.forEach(c => {
+                    content += `${c.name}: ${c.code || 'Geen code'}\n`;
+                });
+            } else {
+                content += `Geen codes beschikbaar.\n`;
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${livery.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_codes.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("TXT-bestand succesvol geëxporteerd!", "success");
+        }
+
+        function exportLiveryPng(id) {
+            const livery = liveries.find(l => l.id === id);
+            if (!livery) return;
+
+            // Populate hidden export template
+            document.getElementById('exportCardTitle').textContent = livery.title;
+            document.getElementById('exportCardColorBadge').style.backgroundColor = livery.vehicleColor || '#0055ff';
+            
+            const imgEl = document.getElementById('exportCardImg');
+            if (livery.photo) {
+                imgEl.src = livery.photo;
+                document.getElementById('exportCardImageContainer').style.display = 'block';
+            } else {
+                document.getElementById('exportCardImageContainer').style.display = 'none';
+            }
+
+            const listEl = document.getElementById('exportCardCodesList');
+            let codesHtml = '';
+            if (livery.codes && livery.codes.length > 0) {
+                livery.codes.forEach(c => {
+                    codesHtml += `
+                        <div class="flex items-center justify-between bg-zinc-950 px-4 py-2.5 rounded-xl border border-zinc-800">
+                            <span class="text-sm font-medium text-zinc-400">${escapeHtml(c.name)}</span>
+                            <code class="text-sm font-mono text-zinc-200">${escapeHtml(c.code || 'Geen code')}</code>
+                        </div>
+                    `;
+                });
+            } else {
+                codesHtml = `<p class="text-xs text-zinc-500 italic">Geen codes toegevoegd</p>`;
+            }
+            listEl.innerHTML = codesHtml;
+
+            const exportTarget = document.getElementById('exportCardContent');
+            
+            showToast("PNG export voorbereiden...", "info");
+
+            setTimeout(() => {
+                html2canvas(exportTarget, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#18181b'
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `${livery.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_livery.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    showToast("PNG-afbeelding succesvol geëxporteerd!", "success");
+                }).catch(err => {
+                    console.error(err);
+                    showToast("Fout bij genereren van PNG.", "error");
+                });
+            }, 300);
+        }
+
         // Render Liveries Grid
         function renderLiveries(filterText = '') {
             const grid = document.getElementById('liveryGrid');
@@ -510,15 +616,28 @@
                             </div>
 
                             <!-- Actions footer inside card -->
-                            <div class="pt-3 border-t border-zinc-800 flex items-center justify-between">
-                                <button onclick="editLivery(${livery.id})" class="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                    <span>Bewerken</span>
-                                </button>
-                                <button onclick="deleteLivery(${livery.id})" class="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1.5 transition-colors cursor-pointer">
-                                    <i class="fa-solid fa-trash"></i>
-                                    <span>Verwijderen</span>
-                                </button>
+                            <div class="pt-3 border-t border-zinc-800 flex flex-col space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <button onclick="editLivery(${livery.id})" class="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                        <span>Bewerken</span>
+                                    </button>
+                                    <button onclick="deleteLivery(${livery.id})" class="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-trash"></i>
+                                        <span>Verwijderen</span>
+                                    </button>
+                                </div>
+                                <!-- Export Buttons -->
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button onclick="exportLiveryPng(${livery.id})" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-image text-xs"></i>
+                                        <span>Export PNG</span>
+                                    </button>
+                                    <button onclick="exportLiveryTxt(${livery.id})" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-file-lines text-xs"></i>
+                                        <span>Export TXT</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
