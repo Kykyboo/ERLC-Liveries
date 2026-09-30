@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERLC Livery Manager - Just Kyan Style</title>
+    <title>Livery Manager Just Kyan</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -83,7 +83,7 @@
                 <i class="fa-solid fa-car text-5xl"></i>
             </div>
             <h3 class="text-lg font-bold text-white mb-1">Geen liveries gevonden</h3>
-            <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg je eerste ERLC livery toe met codes en foto om te beginnen met verzamelen.</p>
+            <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg je eerste ERLC livery toe met codes, voertuigkleur en foto om te beginnen.</p>
             <button onclick="openModal()" class="px-5 py-3 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg transition-colors shadow-lg cursor-pointer text-sm">
                 Eerste Livery Toevoegen
             </button>
@@ -121,6 +121,21 @@
                         class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
                 </div>
 
+                <!-- Vehicle Color Picker / Input -->
+                <div>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Voertuig Kleur (Basis)</label>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative w-12 h-11 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shrink-0 flex items-center justify-center cursor-pointer shadow-inner">
+                            <input type="color" id="vehicleColorPicker" value="#0055ff" 
+                                class="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer p-0 border-0 bg-transparent"
+                                oninput="document.getElementById('vehicleColorInput').value = this.value">
+                        </div>
+                        <input type="text" id="vehicleColorInput" placeholder="#0055ff of naam" value="#0055ff"
+                            class="flex-grow px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm font-mono focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner"
+                            oninput="try { document.getElementById('vehicleColorPicker').value = this.value; } catch(e){}">
+                    </div>
+                </div>
+
                 <!-- Photo Input -->
                 <div>
                     <label class="block text-xs font-medium text-zinc-300 mb-1.5">Foto (URL of Afbeelding Uploaden)</label>
@@ -152,7 +167,7 @@
                             <span>Code Toevoegen</span>
                         </button>
                     </div>
-                    <p class="text-xs text-zinc-500 mb-3">Voeg bijvoorbeeld onderdelen toe zoals "Links", "Rechts", "Dak" met bijbehorende ERLC decalkleur/code.</p>
+                    <p class="text-xs text-zinc-500 mb-3">Voeg onderdelen toe zoals "Links", "Rechts", "Dak" met bijbehorende ERLC decalkleur/code.</p>
                     
                     <div id="codeRowsContainer" class="space-y-3">
                         <!-- Dynamically added rows -->
@@ -217,6 +232,8 @@
             // Reset form
             document.getElementById('liveryId').value = '';
             document.getElementById('titleInput').value = '';
+            document.getElementById('vehicleColorInput').value = '#0055ff';
+            document.getElementById('vehicleColorPicker').value = '#0055ff';
             document.getElementById('photoInput').value = '';
             currentImageBase64 = '';
             hideImagePreview();
@@ -226,6 +243,13 @@
                 modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-zinc-300"></i><span>Livery Bewerken</span>`;
                 document.getElementById('liveryId').value = livery.id;
                 document.getElementById('titleInput').value = livery.title;
+                
+                const vColor = livery.vehicleColor || '#0055ff';
+                document.getElementById('vehicleColorInput').value = vColor;
+                try {
+                    document.getElementById('vehicleColorPicker').value = vColor;
+                } catch(e) {}
+
                 document.getElementById('photoInput').value = livery.photo || '';
                 
                 if (livery.photo) {
@@ -344,6 +368,7 @@
         function saveLivery() {
             const id = document.getElementById('liveryId').value;
             const title = document.getElementById('titleInput').value.trim();
+            const vehicleColor = document.getElementById('vehicleColorInput').value.trim() || '#0055ff';
 
             if (!title) {
                 showToast("Vul alstublieft een titel in voor de livery.", "error");
@@ -364,6 +389,7 @@
             const liveryData = {
                 id: id ? parseInt(id) : Date.now(),
                 title: title,
+                vehicleColor: vehicleColor,
                 photo: currentImageBase64,
                 codes: codes,
                 updatedAt: new Date().toLocaleDateString('nl-NL')
@@ -406,6 +432,7 @@
                 const query = filterText.toLowerCase();
                 filtered = liveries.filter(l => 
                     l.title.toLowerCase().includes(query) || 
+                    l.vehicleColor?.toLowerCase().includes(query) ||
                     l.codes.some(c => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query))
                 );
             }
@@ -425,6 +452,7 @@
             let html = '';
             filtered.forEach(livery => {
                 const photoSrc = livery.photo ? livery.photo : 'https://placehold.co/600x400/18181b/27272a?text=Geen+Foto';
+                const vColor = livery.vehicleColor || '#0055ff';
                 
                 let codesHtml = '';
                 if (livery.codes && livery.codes.length > 0) {
@@ -452,6 +480,12 @@
                             <img src="${photoSrc}" alt="${escapeHtml(livery.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/18181b/27272a?text=Fout+bij+laden'">
                             <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-80"></div>
                             
+                            <!-- Vehicle Color Badge top-left -->
+                            <div class="absolute top-3 left-3 flex items-center space-x-2 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 shadow">
+                                <span class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0" style="background-color: ${escapeHtml(vColor)};"></span>
+                                <span class="text-xs font-mono text-zinc-300">${escapeHtml(vColor)}</span>
+                            </div>
+
                             <div class="absolute top-3 right-3 flex space-x-1 bg-black/70 backdrop-blur-md p-1.5 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onclick="editLivery(${livery.id})" class="p-1.5 text-zinc-300 hover:text-white transition-colors cursor-pointer" title="Bewerken">
                                     <i class="fa-solid fa-pen text-xs"></i>
