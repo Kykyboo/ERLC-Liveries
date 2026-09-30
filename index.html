@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="nl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERLC Livery Manager - Just Kyan Style</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            900: '#18181b',
+                            950: '#09090b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    </style>
+</head>
+<body class="relative flex flex-col min-h-screen bg-cover bg-center bg-fixed text-white selection:bg-white selection:text-zinc-950" style="background-image: url('https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?q=80&w=1920&auto=format&fit=crop')">
+
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none fixed"></div>
+
+    <!-- Header / Navbar -->
+    <header class="relative z-20 bg-zinc-900/90 border-b border-zinc-800 sticky top-0 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-car-side text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-wide text-white">ERLC Livery Hub</h1>
+                    <p class="text-xs text-zinc-400">Beheer je Emergency Response Liberty County codes</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openModal()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-lg transition-colors shadow-lg cursor-pointer flex items-center space-x-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span class="hidden sm:inline">Nieuwe Livery</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col">
+        
+        <!-- Search and Stats Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
+            <div class="relative flex-grow max-w-md">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-zinc-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="searchInput" oninput="filterLiveries()" placeholder="Zoek op titel of code naam..." 
+                    class="w-full pl-10 pr-4 py-3 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+            </div>
+            <div class="flex items-center space-x-3 justify-end text-sm text-zinc-400">
+                <div class="bg-zinc-900/80 border border-zinc-800 px-4 py-3 rounded-xl flex items-center space-x-2 shadow-inner">
+                    <i class="fa-solid fa-database text-zinc-300"></i>
+                    <span>Totaal: <strong id="totalCount" class="text-white">0</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-20 px-4 text-center my-auto">
+            <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl mb-4 text-zinc-600 shadow-xl">
+                <i class="fa-solid fa-car text-5xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-1">Geen liveries gevonden</h3>
+            <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg je eerste ERLC livery toe met codes en foto om te beginnen met verzamelen.</p>
+            <button onclick="openModal()" class="px-5 py-3 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg transition-colors shadow-lg cursor-pointer text-sm">
+                Eerste Livery Toevoegen
+            </button>
+        </div>
+
+        <!-- Liveries Grid -->
+        <div id="liveryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamically populated cards -->
+        </div>
+    </main>
+
+    <!-- Modal for Add/Edit Livery -->
+    <div id="liveryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 sticky top-0 z-10">
+                <h2 id="modalTitle" class="text-lg font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-car-side text-zinc-300"></i>
+                    <span>Nieuwe Livery Toevoegen</span>
+                </h2>
+                <button onclick="closeModal()" class="text-zinc-400 hover:text-white p-2 rounded-lg transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-6">
+                <input type="hidden" id="liveryId">
+
+                <!-- Title Input -->
+                <div>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Livery Titel / Voertuig Naam <span class="text-red-500">*</span></label>
+                    <input type="text" id="titleInput" placeholder="Bijv. Politie Ford Explorer 2020" 
+                        class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+                </div>
+
+                <!-- Photo Input -->
+                <div>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Foto (URL of Afbeelding Uploaden)</label>
+                    <div class="flex gap-3">
+                        <input type="text" id="photoInput" placeholder="Plak afbeeldings-URL hier..." 
+                            class="flex-grow px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner"
+                            oninput="previewImageFromInput(this.value)">
+                        <label class="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-4 py-3 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2 shrink-0">
+                            <i class="fa-solid fa-upload"></i>
+                            <span>Upload</span>
+                            <input type="file" id="imageFile" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        </label>
+                    </div>
+                    <!-- Image Preview container -->
+                    <div id="imagePreviewContainer" class="mt-3 hidden relative rounded-xl overflow-hidden border border-zinc-700 bg-zinc-950 h-44 flex items-center justify-center">
+                        <img id="imagePreview" src="" alt="Preview" class="w-full h-full object-cover">
+                        <button type="button" onclick="clearImage()" class="absolute top-2 right-2 bg-zinc-900/80 hover:bg-red-600 text-white p-2 rounded-lg transition-colors text-xs cursor-pointer shadow-lg">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Code Pairs -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-medium text-zinc-300">Livery Codes <span class="text-red-500">*</span></label>
+                        <button type="button" onclick="addCodeRow()" class="text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1 cursor-pointer">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <span>Code Toevoegen</span>
+                        </button>
+                    </div>
+                    <p class="text-xs text-zinc-500 mb-3">Voeg bijvoorbeeld onderdelen toe zoals "Links", "Rechts", "Dak" met bijbehorende ERLC decalkleur/code.</p>
+                    
+                    <div id="codeRowsContainer" class="space-y-3">
+                        <!-- Dynamically added rows -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-zinc-800 flex justify-end space-x-3 bg-zinc-900 sticky bottom-0 z-10">
+                <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm font-medium transition-colors cursor-pointer">
+                    Annuleren
+                </button>
+                <button type="button" onclick="saveLivery()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">
+                    Opslaan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // State Management
+        let liveries = [];
+        let currentImageBase64 = '';
+
+        // Initialize App on DOM Load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            renderLiveries();
+        });
+
+        // LocalStorage functions
+        function loadFromLocalStorage() {
+            try {
+                const stored = localStorage.getItem('erlc_just_kyan_liveries');
+                if (stored) {
+                    liveries = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Fout bij laden van LocalStorage:", e);
+                liveries = [];
+            }
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('erlc_just_kyan_liveries', JSON.stringify(liveries));
+            } catch (e) {
+                console.error("Fout bij opslaan in LocalStorage:", e);
+                showToast("Fout bij opslaan! Mogelijk is de afbeelding te groot.", "error");
+            }
+        }
+
+        // Modal Controls
+        function openModal(livery = null) {
+            const modal = document.getElementById('liveryModal');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            // Reset form
+            document.getElementById('liveryId').value = '';
+            document.getElementById('titleInput').value = '';
+            document.getElementById('photoInput').value = '';
+            currentImageBase64 = '';
+            hideImagePreview();
+            document.getElementById('codeRowsContainer').innerHTML = '';
+
+            if (livery) {
+                modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-zinc-300"></i><span>Livery Bewerken</span>`;
+                document.getElementById('liveryId').value = livery.id;
+                document.getElementById('titleInput').value = livery.title;
+                document.getElementById('photoInput').value = livery.photo || '';
+                
+                if (livery.photo) {
+                    currentImageBase64 = livery.photo;
+                    showImagePreview(livery.photo);
+                }
+
+                if (livery.codes && livery.codes.length > 0) {
+                    livery.codes.forEach(c => addCodeRow(c.name, c.code));
+                } else {
+                    addCodeRow();
+                }
+            } else {
+                modalTitle.innerHTML = `<i class="fa-solid fa-car-side text-zinc-300"></i><span>Nieuwe Livery Toevoegen</span>`;
+                addCodeRow('Links', '');
+                addCodeRow('Rechts', '');
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div.transform').classList.remove('scale-95');
+                modal.querySelector('div.transform').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('liveryModal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div.transform').classList.remove('scale-100');
+            modal.querySelector('div.transform').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Image Handling
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result;
+                document.getElementById('photoInput').value = ''; 
+                showImagePreview(currentImageBase64);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function previewImageFromInput(url) {
+            if (url.trim() !== '') {
+                currentImageBase64 = url;
+                showImagePreview(url);
+            } else {
+                currentImageBase64 = '';
+                hideImagePreview();
+            }
+        }
+
+        function showImagePreview(src) {
+            const container = document.getElementById('imagePreviewContainer');
+            const img = document.getElementById('imagePreview');
+            img.src = src;
+            container.classList.remove('hidden');
+        }
+
+        function clearImage() {
+            currentImageBase64 = '';
+            document.getElementById('photoInput').value = '';
+            document.getElementById('imageFile').value = '';
+            hideImagePreview();
+        }
+
+        function hideImagePreview() {
+            const container = document.getElementById('imagePreviewContainer');
+            const img = document.getElementById('imagePreview');
+            img.src = '';
+            container.classList.add('hidden');
+        }
+
+        // Dynamic Code Rows Management
+        function addCodeRow(name = '', code = '') {
+            const container = document.getElementById('codeRowsContainer');
+            const rowId = 'row_' + Math.random().toString(36).substring(2, 9);
+            
+            const rowDiv = document.createElement('div');
+            rowDiv.id = rowId;
+            rowDiv.className = 'flex items-center space-x-2 bg-zinc-950 p-3 rounded-xl border border-zinc-800 shadow-inner';
+            
+            rowDiv.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" placeholder="Naam (bijv. Links, Dak)" value="${escapeHtml(name)}" class="code-name w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-white shadow-inner">
+                </div>
+                <div class="flex-2 flex items-center space-x-2 flex-grow">
+                    <input type="text" placeholder="Decal Code (bijv. 12345678)" value="${escapeHtml(code)}" class="code-value w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm font-mono text-zinc-300 focus:outline-none focus:border-white shadow-inner">
+                    <button type="button" onclick="copySingleCode(this)" title="Kopieer code" class="p-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 rounded-lg transition-colors shrink-0 cursor-pointer">
+                        <i class="fa-regular fa-copy text-xs"></i>
+                    </button>
+                    <button type="button" onclick="removeCodeRow('${rowId}')" title="Verwijder rij" class="p-2 bg-red-950/40 hover:bg-red-900/50 border border-red-900/50 text-red-400 rounded-lg transition-colors shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        }
+
+        function removeCodeRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+            }
+        }
+
+        // Save Livery Data
+        function saveLivery() {
+            const id = document.getElementById('liveryId').value;
+            const title = document.getElementById('titleInput').value.trim();
+
+            if (!title) {
+                showToast("Vul alstublieft een titel in voor de livery.", "error");
+                document.getElementById('titleInput').focus();
+                return;
+            }
+
+            const rowElements = document.querySelectorAll('#codeRowsContainer > div');
+            const codes = [];
+            rowElements.forEach(row => {
+                const name = row.querySelector('.code-name').value.trim();
+                const code = row.querySelector('.code-value').value.trim();
+                if (name || code) {
+                    codes.push({ name: name || 'Onderdeel', code: code });
+                }
+            });
+
+            const liveryData = {
+                id: id ? parseInt(id) : Date.now(),
+                title: title,
+                photo: currentImageBase64,
+                codes: codes,
+                updatedAt: new Date().toLocaleDateString('nl-NL')
+            };
+
+            if (id) {
+                const index = liveries.findIndex(l => l.id == id);
+                if (index !== -1) {
+                    liveries[index] = liveryData;
+                }
+                showToast("Livery succesvol bijgewerkt!", "success");
+            } else {
+                liveries.unshift(liveryData);
+                showToast("Livery succesvol toegevoegd!", "success");
+            }
+
+            saveToLocalStorage();
+            renderLiveries();
+            closeModal();
+        }
+
+        // Delete Livery
+        function deleteLivery(id) {
+            if (confirm("Weet je zeker dat je deze livery wilt verwijderen?")) {
+                liveries = liveries.filter(l => l.id !== id);
+                saveToLocalStorage();
+                renderLiveries();
+                showToast("Livery verwijderd.", "info");
+            }
+        }
+
+        // Render Liveries Grid
+        function renderLiveries(filterText = '') {
+            const grid = document.getElementById('liveryGrid');
+            const emptyState = document.getElementById('emptyState');
+            const totalCount = document.getElementById('totalCount');
+
+            let filtered = liveries;
+            if (filterText.trim() !== '') {
+                const query = filterText.toLowerCase();
+                filtered = liveries.filter(l => 
+                    l.title.toLowerCase().includes(query) || 
+                    l.codes.some(c => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query))
+                );
+            }
+
+            totalCount.textContent = liveries.length;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            emptyState.classList.remove('flex');
+            emptyState.classList.add('hidden');
+
+            let html = '';
+            filtered.forEach(livery => {
+                const photoSrc = livery.photo ? livery.photo : 'https://placehold.co/600x400/18181b/27272a?text=Geen+Foto';
+                
+                let codesHtml = '';
+                if (livery.codes && livery.codes.length > 0) {
+                    livery.codes.forEach(c => {
+                        codesHtml += `
+                            <div class="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-xl border border-zinc-800 shadow-inner">
+                                <span class="text-xs font-medium text-zinc-400">${escapeHtml(c.name)}</span>
+                                <div class="flex items-center space-x-2">
+                                    <code class="text-xs font-mono text-zinc-200 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">${escapeHtml(c.code || 'Geen code')}</code>
+                                    <button onclick="copyToClipboard('${escapeHtml(c.code)}', this)" class="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer" title="Kopieer code">
+                                        <i class="fa-regular fa-copy text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    codesHtml = `<p class="text-xs text-zinc-500 italic">Geen codes toegevoegd</p>`;
+                }
+
+                html += `
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col transition-all hover:border-zinc-700 backdrop-blur-sm">
+                        <!-- Image banner -->
+                        <div class="relative h-48 w-full bg-zinc-950 overflow-hidden group">
+                            <img src="${photoSrc}" alt="${escapeHtml(livery.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/18181b/27272a?text=Fout+bij+laden'">
+                            <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-80"></div>
+                            
+                            <div class="absolute top-3 right-3 flex space-x-1 bg-black/70 backdrop-blur-md p-1.5 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editLivery(${livery.id})" class="p-1.5 text-zinc-300 hover:text-white transition-colors cursor-pointer" title="Bewerken">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteLivery(${livery.id})" class="p-1.5 text-red-400 hover:text-red-300 transition-colors cursor-pointer" title="Verwijderen">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </div>
+
+                            <span class="absolute bottom-3 left-3 text-xs text-zinc-300 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow">
+                                ${livery.updatedAt || 'Onbekend'}
+                            </span>
+                        </div>
+
+                        <!-- Content Body -->
+                        <div class="p-5 flex-grow flex flex-col justify-between space-y-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white mb-3">${escapeHtml(livery.title)}</h3>
+                                <div class="space-y-2">
+                                    ${codesHtml}
+                                </div>
+                            </div>
+
+                            <!-- Actions footer inside card -->
+                            <div class="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                                <button onclick="editLivery(${livery.id})" class="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>Bewerken</span>
+                                </button>
+                                <button onclick="deleteLivery(${livery.id})" class="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                    <i class="fa-solid fa-trash"></i>
+                                    <span>Verwijderen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function filterLiveries() {
+            const query = document.getElementById('searchInput').value;
+            renderLiveries(query);
+        }
+
+        function editLivery(id) {
+            const livery = liveries.find(l => l.id === id);
+            if (livery) {
+                openModal(livery);
+            }
+        }
+
+        // Clipboard Helper
+        function copyToClipboard(text, btnElement) {
+            if (!text) {
+                showToast("Geen code aanwezig om te kopiëren.", "error");
+                return;
+            }
+
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast("Code gekopieerd naar klembord!", "success");
+                    if (btnElement) {
+                        const icon = btnElement.querySelector('i');
+                        icon.className = "fa-solid fa-check text-xs text-green-400";
+                        setTimeout(() => {
+                            icon.className = "fa-regular fa-copy text-xs";
+                        }, 2000);
+                    }
+                } else {
+                    showToast("Kopiëren mislukt.", "error");
+                }
+            } catch (err) {
+                console.error('Kon tekst niet kopiëren', err);
+                showToast("Kopiëren mislukt.", "error");
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        function copySingleCode(btn) {
+            const row = btn.closest('div.flex');
+            const codeInput = row.querySelector('.code-value');
+            copyToClipboard(codeInput.value, btn);
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-zinc-900 border-zinc-700 text-white shadow-2xl';
+            let icon = 'fa-circle-check text-green-400';
+            
+            if (type === 'error') {
+                icon = 'fa-circle-exclamation text-red-400';
+            } else if (type === 'info') {
+                icon = 'fa-circle-info text-zinc-300';
+            }
+
+            toast.className = `pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl border ${bgClass} transform translate-y-2 opacity-0 transition-all duration-300`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icon} text-lg"></i>
+                <span class="text-sm font-medium">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Utility to prevent XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
