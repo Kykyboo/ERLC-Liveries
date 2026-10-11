@@ -52,6 +52,13 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
+                <button onclick="document.getElementById('jsonImportInput').click()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer">
+                    <i class="fa-solid fa-file-import mr-1"></i><span class="hidden sm:inline">Import JSON</span>
+                </button>
+                <button onclick="exportAllJson()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer">
+                    <i class="fa-solid fa-file-export mr-1"></i><span class="hidden sm:inline">Download JSON</span>
+                </button>
+                <input type="file" id="jsonImportInput" accept=".json,application/json" class="hidden" onchange="importAllJson(event)">
                 <button onclick="openModal()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-lg transition-colors shadow-lg cursor-pointer flex items-center space-x-2">
                     <i class="fa-solid fa-plus text-xs"></i>
                     <span class="hidden sm:inline">Nieuwe Livery</span>
@@ -213,35 +220,34 @@
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        // State Management
+        // GitHub Pages-versie: alles draait in één statisch HTML-bestand.
+        // De browser bewaart liverygegevens lokaal. Gebruik JSON export/import
+        // om gegevens over te zetten of een back-up te maken.
         let liveries = [];
         let currentImageBase64 = '';
 
-        // Initialize App on DOM Load
         document.addEventListener('DOMContentLoaded', () => {
             loadFromLocalStorage();
             renderLiveries();
         });
 
-        // LocalStorage functions
         function loadFromLocalStorage() {
             try {
                 const stored = localStorage.getItem('erlc_just_kyan_liveries');
-                if (stored) {
-                    liveries = JSON.parse(stored);
-                }
+                if (stored) liveries = JSON.parse(stored);
             } catch (e) {
-                console.error("Fout bij laden van LocalStorage:", e);
+                console.error('Fout bij laden van browseropslag:', e);
                 liveries = [];
             }
         }
 
         function saveToLocalStorage() {
             try {
+                // Grote Base64-afbeeldingen kunnen de browseropslaglimiet bereiken.
                 localStorage.setItem('erlc_just_kyan_liveries', JSON.stringify(liveries));
             } catch (e) {
-                console.error("Fout bij opslaan in LocalStorage:", e);
-                showToast("Fout bij opslaan! Mogelijk is de afbeelding te groot.", "error");
+                console.error('Fout bij opslaan in browseropslag:', e);
+                showToast('Opslaan mislukt. Exporteer JSON of gebruik kleinere afbeeldingen.', 'error');
             }
         }
 
@@ -312,11 +318,21 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            if (!file.type.startsWith('image/')) {
+                showToast('Kies een geldig afbeeldingsbestand.', 'error');
+                event.target.value = '';
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 currentImageBase64 = e.target.result;
-                document.getElementById('photoInput').value = ''; 
+                document.getElementById('photoInput').value = '';
                 showImagePreview(currentImageBase64);
+                showToast('Afbeelding geladen. Sla de livery op om deze in je browser te bewaren.', 'info');
+            };
+            reader.onerror = function() {
+                showToast('Afbeelding kon niet worden gelezen.', 'error');
             };
             reader.readAsDataURL(file);
         }
@@ -439,6 +455,80 @@
                 saveToLocalStorage();
                 renderLiveries();
                 showToast("Livery verwijderd.", "info");
+            }
+        }
+
+        // Draagbare, leesbare (niet-versleutelde) JSON-back-up voor GitHub Pages.
+        // Foto's/data-URL's worden mee opgeslagen, zodat de back-up op een ander apparaat werkt.
+        function exportAllJson() {
+            const portableBackup = {
+                format: 'erlc-livery-hub-export',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                liveries: liveries
+            };
+            const blob = new Blob([JSON.stringify(portableBackup, null, 2)], {
+                type: 'application/json;charset=utf-8'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'erlc-liveries-decrypted.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('Leesbare JSON-back-up met liveries geëxporteerd.', 'success');
+        }
+
+        async function importAllJson(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const parsed = JSON.parse(await file.text());
+                // Ondersteun zowel oude exports (array) als het nieuwe draagbare formaat.
+                const imported = Array.isArray(parsed) ? parsed : parsed.liveries;
+                if (!Array.isArray(imported)) throw new Error('Dit JSON-bestand bevat geen geldige liveries.');
+                const normalized = imported.map((item, index) => {
+                    if (!item || typeof item !== 'object' || !item.title) {
+                        throw new Error('Livery #' + (index + 1) + ' is ongeldig.');
+                    }
+                    return {
+                        id: item.id ?? (Date.now() + index),
+                        title: String(item.title),
+                        vehicleColor: String(item.vehicleColor || '#0055ff'),
+                        photo: item.photo || '',
+                        codes: Array.isArray(item.codes) ? item.codes.map(c => ({
+                            name: String(c.name || 'Onderdeel'),
+                            code: String(c.code || '')
+                        })) : [],
+                        updatedAt: String(item.updatedAt || '')
+                    };
+                });
+
+                const merge = confirm(
+                    'Klik OK om de liveries samen te voegen met je huidige verzameling.\n' +
+                    'Klik Annuleren om je huidige verzameling te vervangen.'
+                );
+                if (merge) {
+                    const ids = new Set(liveries.map(item => String(item.id)));
+                    const additions = normalized.map((item, index) => {
+                        const copy = { ...item };
+                        if (ids.has(String(copy.id))) copy.id = Date.now() + index + Math.floor(Math.random() * 100000);
+                        ids.add(String(copy.id));
+                        return copy;
+                    });
+                    liveries = [...additions, ...liveries];
+                } else {
+                    liveries = normalized;
+                }
+                saveToLocalStorage();
+                renderLiveries();
+                showToast(imported.length + ' liveries succesvol geïmporteerd.', 'success');
+            } catch (error) {
+                showToast('JSON import mislukt: ' + (error.message || 'ongeldig bestand'), 'error');
+            } finally {
+                event.target.value = '';
             }
         }
 
