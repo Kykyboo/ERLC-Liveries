@@ -3,55 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livery Manager Just Kyan</title>
-    <!-- Tailwind CSS CDN -->
+    <title>ERLC Hub - Just Kyan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        zinc: {
-                            900: '#18181b',
-                            950: '#09090b',
-                        }
-                    }
-                }
-            }
+            theme: { extend: { colors: { zinc: { 900: '#18181b', 950: '#09090b' } } } }
         }
     </script>
-    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- html2canvas for PNG export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #09090b; }
         ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        .checker { background-image: linear-gradient(45deg,#1f1f23 25%,transparent 25%),linear-gradient(-45deg,#1f1f23 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1f1f23 75%),linear-gradient(-45deg,transparent 75%,#1f1f23 75%); background-size: 16px 16px; background-position: 0 0,0 8px,8px -8px,-8px 0; background-color:#09090b; }
+        select option, select optgroup { background:#18181b; color:#fff; }
+        body.customer-mode #appHeader, body.customer-mode #tabsBar, body.customer-mode #searchBar,
+        body.customer-mode #productPicker, body.customer-mode #copyLinkBtn { display:none !important; }
+        .customer-only { display:none; }
+        body.customer-mode .customer-only { display:block !important; }
+        body.customer-mode #hubBack { display:none !important; }
+        .tab-active { background:#fff !important; color:#09090b !important; }
     </style>
 </head>
 <body class="relative flex flex-col min-h-screen bg-cover bg-center bg-fixed text-white selection:bg-white selection:text-zinc-950" style="background-image: url('https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?q=80&w=1920&auto=format&fit=crop')">
 
     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none fixed"></div>
 
-    <!-- Header / Navbar -->
-    <header class="relative z-20 bg-zinc-900/90 border-b border-zinc-800 sticky top-0 backdrop-blur-md">
+    <!-- Header -->
+    <header id="appHeader" class="relative z-20 bg-zinc-900/90 border-b border-zinc-800 sticky top-0 backdrop-blur-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white shadow-lg">
                     <i class="fa-solid fa-car-side text-lg"></i>
                 </div>
-                <div>
-                    <h1 class="text-base font-bold tracking-wide text-white">ERLC Livery Hub</h1>
-                    <p class="text-xs text-zinc-400">Beheer & Exporteer je Emergency Response Liberty County codes</p>
+                <div class="hidden sm:block">
+                    <h1 class="text-base font-bold tracking-wide text-white">ERLC Hub</h1>
+                    <p class="text-xs text-zinc-400">Opslag voor je liveries &amp; uniforms, plus je product hub</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 sm:space-x-3">
                 <button onclick="document.getElementById('jsonImportInput').click()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer">
                     <i class="fa-solid fa-file-import mr-1"></i><span class="hidden sm:inline">Import JSON</span>
                 </button>
@@ -59,23 +53,36 @@
                     <i class="fa-solid fa-file-export mr-1"></i><span class="hidden sm:inline">Download JSON</span>
                 </button>
                 <input type="file" id="jsonImportInput" accept=".json,application/json" class="hidden" onchange="importAllJson(event)">
-                <button onclick="openModal()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-lg transition-colors shadow-lg cursor-pointer flex items-center space-x-2">
+                <button id="newBtn" onclick="openNew()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-lg transition-colors shadow-lg cursor-pointer flex items-center space-x-2">
                     <i class="fa-solid fa-plus text-xs"></i>
-                    <span class="hidden sm:inline">Nieuwe Livery</span>
+                    <span id="newBtnLabel" class="hidden sm:inline">Nieuwe Livery</span>
                 </button>
             </div>
         </div>
     </header>
 
     <main class="relative z-10 flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col">
-        
-        <!-- Search and Stats Bar -->
-        <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
+
+        <!-- Tabs -->
+        <div id="tabsBar" class="flex items-center space-x-2 mb-6 flex-wrap gap-y-2">
+            <button id="tabLiveries" onclick="switchView('liveries')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors">
+                <i class="fa-solid fa-car-side mr-1.5"></i>Liveries
+            </button>
+            <button id="tabClothing" onclick="switchView('clothing')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors">
+                <i class="fa-solid fa-shirt mr-1.5"></i>Uniforms
+            </button>
+            <button id="tabProduct" onclick="switchView('product')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors">
+                <i class="fa-solid fa-store mr-1.5"></i>Product Hub
+            </button>
+        </div>
+
+        <!-- Search and Stats -->
+        <div id="searchBar" class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
             <div class="relative flex-grow max-w-md">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-zinc-400">
                     <i class="fa-solid fa-magnifying-glass text-sm"></i>
                 </span>
-                <input type="text" id="searchInput" oninput="filterLiveries()" placeholder="Zoek op titel of code naam..." 
+                <input type="text" id="searchInput" oninput="filterCurrent()" placeholder="Zoek op titel of code naam..."
                     class="w-full pl-10 pr-4 py-3 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
             </div>
             <div class="flex items-center space-x-3 justify-end text-sm text-zinc-400">
@@ -86,29 +93,96 @@
             </div>
         </div>
 
-        <!-- Empty State -->
-        <div id="emptyState" class="hidden flex-col items-center justify-center py-20 px-4 text-center my-auto">
-            <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl mb-4 text-zinc-600 shadow-xl">
-                <i class="fa-solid fa-car text-5xl"></i>
+        <!-- ================= LIVERIES VIEW ================= -->
+        <section id="viewLiveries">
+            <div id="emptyState" class="hidden flex-col items-center justify-center py-20 px-4 text-center my-auto">
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl mb-4 text-zinc-600 shadow-xl">
+                    <i class="fa-solid fa-car text-5xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">Geen liveries gevonden</h3>
+                <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg je eerste ERLC livery toe met codes, voertuigkleur en foto om te beginnen.</p>
+                <button onclick="openModal()" class="px-5 py-3 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg transition-colors shadow-lg cursor-pointer text-sm">
+                    Eerste Livery Toevoegen
+                </button>
             </div>
-            <h3 class="text-lg font-bold text-white mb-1">Geen liveries gevonden</h3>
-            <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg je eerste ERLC livery toe met codes, voertuigkleur en foto om te beginnen.</p>
-            <button onclick="openModal()" class="px-5 py-3 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg transition-colors shadow-lg cursor-pointer text-sm">
-                Eerste Livery Toevoegen
-            </button>
-        </div>
+            <div id="liveryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
 
-        <!-- Liveries Grid -->
-        <div id="liveryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Dynamically populated cards -->
-        </div>
+        <!-- ================= CLOTHING VIEW ================= -->
+        <section id="viewClothing" class="hidden">
+            <div id="clothingEmptyState" class="hidden flex-col items-center justify-center py-20 px-4 text-center my-auto">
+                <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl mb-4 text-zinc-600 shadow-xl">
+                    <i class="fa-solid fa-shirt text-5xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-1">Geen uniforms gevonden</h3>
+                <p class="text-sm text-zinc-400 max-w-sm mb-6">Voeg een uniform toe met een shirt-ID, broek-ID en de bijbehorende PNG-bestanden.</p>
+                <button onclick="openClothingModal()" class="px-5 py-3 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg transition-colors shadow-lg cursor-pointer text-sm">
+                    Eerste Uniform Toevoegen
+                </button>
+            </div>
+            <div id="clothingGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- ================= PRODUCT HUB ================= -->
+        <section id="viewProduct" class="hidden">
+            <div id="hubList">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-white">Product Hub</h2>
+                    <p class="text-sm text-zinc-400 mt-1">Al je liveries en uniforms op één plek. Open een product voor de preview en de codes, of vink producten aan om er een pack van te maken.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-2">
+                        <button id="hubChip_all" onclick="setHubFilter('all')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors">Alles</button>
+                        <button id="hubChip_l" onclick="setHubFilter('l')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors"><i class="fa-solid fa-car-side mr-1.5"></i>Liveries</button>
+                        <button id="hubChip_c" onclick="setHubFilter('c')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors"><i class="fa-solid fa-shirt mr-1.5"></i>Uniforms</button>
+                        <button id="hubChip_p" onclick="setHubFilter('p')" class="px-4 py-2 rounded-xl text-sm font-semibold border border-zinc-800 bg-zinc-900/80 text-zinc-300 cursor-pointer transition-colors"><i class="fa-solid fa-boxes-stacked mr-1.5"></i>Packs</button>
+                    </div>
+                    <div class="relative w-full sm:max-w-xs">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-zinc-400"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
+                        <input type="text" id="hubSearch" oninput="renderHub()" placeholder="Zoek in de hub..."
+                            class="w-full pl-10 pr-4 py-2.5 bg-zinc-900/80 border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+                    </div>
+                </div>
+                <div id="hubEmpty" class="hidden flex-col items-center justify-center py-20 px-4 text-center">
+                    <div class="bg-zinc-900/80 border border-zinc-800 p-6 rounded-2xl mb-4 text-zinc-600 shadow-xl"><i class="fa-solid fa-store text-5xl"></i></div>
+                    <h3 class="text-lg font-bold text-white mb-1">Nog geen producten</h3>
+                    <p class="text-sm text-zinc-400 max-w-sm mb-6">Sla liveries of uniforms op en ze verschijnen hier automatisch in je hub.</p>
+                    <div class="flex gap-3">
+                        <button onclick="switchView('liveries')" class="px-4 py-2.5 bg-white hover:bg-zinc-200 text-zinc-950 font-semibold rounded-lg text-sm cursor-pointer">Naar Liveries</button>
+                        <button onclick="switchView('clothing')" class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold rounded-lg text-sm cursor-pointer">Naar Uniforms</button>
+                    </div>
+                </div>
+                <div id="hubGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="hubDetail" class="hidden max-w-2xl w-full mx-auto">
+                <div class="customer-only text-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Ontvang jouw product</h2>
+                    <p class="text-sm text-zinc-400 mt-1">Alles wat je nodig hebt: de preview en de codes.</p>
+                </div>
+                <button id="hubBack" onclick="showHubList()" class="mb-4 text-sm text-zinc-300 hover:text-white flex items-center gap-2 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-arrow-left text-xs"></i><span>Terug naar hub</span>
+                </button>
+                <div id="productCard" class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"></div>
+                <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                    <button onclick="copyAllCodes()" class="flex-[2] px-5 py-3.5 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-xl transition-colors shadow-lg cursor-pointer flex items-center justify-center space-x-2">
+                        <i class="fa-regular fa-copy text-xs"></i><span>Kopieer alles</span>
+                    </button>
+                    <button id="copyLinkBtn" onclick="copyProductLink()" class="flex-1 px-5 py-3.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-link text-xs"></i><span>Klantlink</span>
+                    </button>
+                </div>
+                <div id="packActions" class="gap-3 mt-3" style="display:none">
+                    <button onclick="editCurrentPack()" class="flex-1 px-4 py-2.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm font-medium rounded-xl cursor-pointer flex items-center justify-center gap-2"><i class="fa-solid fa-pen-to-square text-xs"></i>Pack bewerken</button>
+                    <button onclick="deleteCurrentPack()" class="flex-1 px-4 py-2.5 bg-red-950/40 hover:bg-red-900/50 border border-red-900/50 text-red-400 text-sm font-medium rounded-xl cursor-pointer flex items-center justify-center gap-2"><i class="fa-solid fa-trash text-xs"></i>Pack verwijderen</button>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Modal for Add/Edit Livery -->
+    <!-- Modal: Livery -->
     <div id="liveryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
-            
-            <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 sticky top-0 z-10">
                 <h2 id="modalTitle" class="text-lg font-bold text-white flex items-center space-x-2">
                     <i class="fa-solid fa-car-side text-zinc-300"></i>
@@ -119,23 +193,20 @@
                 </button>
             </div>
 
-            <!-- Modal Body -->
             <div class="p-6 overflow-y-auto space-y-6">
                 <input type="hidden" id="liveryId">
 
-                <!-- Title Input -->
                 <div>
                     <label class="block text-xs font-medium text-zinc-300 mb-1.5">Livery Titel / Voertuig Naam <span class="text-red-500">*</span></label>
-                    <input type="text" id="titleInput" placeholder="Bijv. Politie Ford Explorer 2020" 
+                    <input type="text" id="titleInput" placeholder="Bijv. Politie Ford Explorer 2020"
                         class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
                 </div>
 
-                <!-- Vehicle Color Picker / Input -->
                 <div>
                     <label class="block text-xs font-medium text-zinc-300 mb-1.5">Voertuig Kleur (Basis)</label>
                     <div class="flex items-center space-x-3">
                         <div class="relative w-12 h-11 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden shrink-0 flex items-center justify-center cursor-pointer shadow-inner">
-                            <input type="color" id="vehicleColorPicker" value="#0055ff" 
+                            <input type="color" id="vehicleColorPicker" value="#0055ff"
                                 class="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer p-0 border-0 bg-transparent"
                                 oninput="document.getElementById('vehicleColorInput').value = this.value">
                         </div>
@@ -145,11 +216,10 @@
                     </div>
                 </div>
 
-                <!-- Photo Input -->
                 <div>
                     <label class="block text-xs font-medium text-zinc-300 mb-1.5">Foto (URL of Afbeelding Uploaden)</label>
                     <div class="flex gap-3">
-                        <input type="text" id="photoInput" placeholder="Plak afbeeldings-URL hier..." 
+                        <input type="text" id="photoInput" placeholder="Plak afbeeldings-URL hier..."
                             class="flex-grow px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner"
                             oninput="previewImageFromInput(this.value)">
                         <label class="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 px-4 py-3 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2 shrink-0">
@@ -158,7 +228,6 @@
                             <input type="file" id="imageFile" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                         </label>
                     </div>
-                    <!-- Image Preview container -->
                     <div id="imagePreviewContainer" class="mt-3 hidden relative rounded-xl overflow-hidden border border-zinc-700 bg-zinc-950 h-44 flex items-center justify-center">
                         <img id="imagePreview" src="" alt="Preview" class="w-full h-full object-cover">
                         <button type="button" onclick="clearImage()" class="absolute top-2 right-2 bg-zinc-900/80 hover:bg-red-600 text-white p-2 rounded-lg transition-colors text-xs cursor-pointer shadow-lg">
@@ -167,7 +236,6 @@
                     </div>
                 </div>
 
-                <!-- Dynamic Code Pairs -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-xs font-medium text-zinc-300">Livery Codes <span class="text-red-500">*</span></label>
@@ -177,86 +245,224 @@
                         </button>
                     </div>
                     <p class="text-xs text-zinc-500 mb-3">Voeg onderdelen toe zoals "Links", "Rechts", "Dak" met bijbehorende ERLC decalkleur/code.</p>
-                    
-                    <div id="codeRowsContainer" class="space-y-3">
-                        <!-- Dynamically added rows -->
+                    <div id="codeRowsContainer" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-zinc-800 flex justify-end space-x-3 bg-zinc-900 sticky bottom-0 z-10">
+                <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm font-medium transition-colors cursor-pointer">Annuleren</button>
+                <button type="button" onclick="saveLivery()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">Opslaan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Clothing -->
+    <div id="clothingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900 sticky top-0 z-10">
+                <h2 id="clothingModalTitle" class="text-lg font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-shirt text-zinc-300"></i>
+                    <span>Nieuw Uniform Toevoegen</span>
+                </h2>
+                <button onclick="closeClothingModal()" class="text-zinc-400 hover:text-white p-2 rounded-lg transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6">
+                <input type="hidden" id="clothingId">
+
+                <div>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Outfit Naam <span class="text-red-500">*</span></label>
+                    <input type="text" id="clothingTitleInput" placeholder="Bijv. Politie Uniform"
+                        class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-1.5"><i class="fa-solid fa-shirt mr-1"></i>Shirt ID</label>
+                        <input type="text" id="shirtIdInput" placeholder="Shirt ID (bijv. 12345678)"
+                            class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm font-mono focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-1.5"><i class="fa-solid fa-socks mr-1"></i>Broek ID</label>
+                        <input type="text" id="pantsIdInput" placeholder="Broek ID (bijv. 87654321)"
+                            class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm font-mono focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
                     </div>
                 </div>
 
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="px-6 py-4 border-t border-zinc-800 flex justify-end space-x-3 bg-zinc-900 sticky bottom-0 z-10">
-                <button type="button" onclick="closeModal()" class="px-4 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm font-medium transition-colors cursor-pointer">
-                    Annuleren
-                </button>
-                <button type="button" onclick="saveLivery()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">
-                    Opslaan
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hidden Export Card Template (for generating PNG with html2canvas) -->
-    <div id="exportCardWrapper" style="position: absolute; left: -9999px; top: -9999px;">
-        <div id="exportCardContent" class="w-[500px] bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl p-6 text-white font-sans">
-            <div class="flex items-center space-x-3 mb-4">
-                <div id="exportCardColorBadge" class="w-6 h-6 rounded-full border border-white/20 shrink-0"></div>
                 <div>
-                    <h2 id="exportCardTitle" class="text-xl font-bold">Voertuig Titel</h2>
-                    <p class="text-xs text-zinc-400">ERLC Livery Hub - Just Kyan Style</p>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Preview</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="relative h-56 rounded-xl border border-zinc-700 checker overflow-hidden flex items-center justify-center">
+                            <img id="shirtPreview" src="" alt="Shirt preview" class="hidden max-w-full max-h-full object-contain">
+                            <span id="shirtPreviewEmpty" class="text-xs text-zinc-500 text-center px-2"><i class="fa-solid fa-shirt text-2xl block mb-2"></i>Geen shirt PNG</span>
+                            <span class="absolute bottom-2 left-2 text-[10px] bg-black/70 px-2 py-0.5 rounded-md border border-white/10 text-zinc-300">Shirt</span>
+                        </div>
+                        <div class="relative h-56 rounded-xl border border-zinc-700 checker overflow-hidden flex items-center justify-center">
+                            <img id="pantsPreview" src="" alt="Broek preview" class="hidden max-w-full max-h-full object-contain">
+                            <span id="pantsPreviewEmpty" class="text-xs text-zinc-500 text-center px-2"><i class="fa-solid fa-socks text-2xl block mb-2"></i>Geen broek PNG</span>
+                            <span class="absolute bottom-2 left-2 text-[10px] bg-black/70 px-2 py-0.5 rounded-md border border-white/10 text-zinc-300">Broek</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-1.5">Shirt PNG uploaden</label>
+                        <div class="flex gap-2">
+                            <label class="flex-grow cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-dashed border-zinc-600 text-zinc-200 px-4 py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-upload"></i><span>Kies PNG</span>
+                                <input type="file" id="shirtFile" accept="image/png,image/*" class="hidden" onchange="handleClothingUpload(event,'shirt')">
+                            </label>
+                            <button type="button" onclick="clearClothingImage('shirt')" title="Verwijder" class="px-3 bg-red-950/40 hover:bg-red-900/50 border border-red-900/50 text-red-400 rounded-xl cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-300 mb-1.5">Broek PNG uploaden</label>
+                        <div class="flex gap-2">
+                            <label class="flex-grow cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-dashed border-zinc-600 text-zinc-200 px-4 py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-upload"></i><span>Kies PNG</span>
+                                <input type="file" id="pantsFile" accept="image/png,image/*" class="hidden" onchange="handleClothingUpload(event,'pants')">
+                            </label>
+                            <button type="button" onclick="clearClothingImage('pants')" title="Verwijder" class="px-3 bg-red-950/40 hover:bg-red-900/50 border border-red-900/50 text-red-400 rounded-xl cursor-pointer"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div id="exportCardImageContainer" class="w-full h-56 rounded-xl overflow-hidden border border-zinc-800 mb-4 bg-zinc-950">
-                <img id="exportCardImg" src="" class="w-full h-full object-cover" crossorigin="anonymous">
-            </div>
-            <div class="space-y-2" id="exportCardCodesList">
-                <!-- Codes injected here -->
+
+            <div class="px-6 py-4 border-t border-zinc-800 flex justify-end space-x-3 bg-zinc-900 sticky bottom-0 z-10">
+                <button type="button" onclick="closeClothingModal()" class="px-4 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm font-medium transition-colors cursor-pointer">Annuleren</button>
+                <button type="button" onclick="saveClothing()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">Opslaan</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Container -->
+    <!-- Selectiebalk (Product Hub) -->
+    <div id="selectionBar" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 hidden items-center gap-3 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl px-4 py-3">
+        <span id="selectionCount" class="text-sm text-white font-medium whitespace-nowrap">0 geselecteerd</span>
+        <button onclick="openPackFromSelection()" class="px-4 py-2 bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold rounded-lg cursor-pointer whitespace-nowrap"><i class="fa-solid fa-boxes-stacked mr-1.5"></i>Pack maken</button>
+        <button onclick="clearSelection()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-sm font-medium rounded-lg cursor-pointer">Wissen</button>
+    </div>
+
+    <!-- Modal: Pack -->
+    <div id="packModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900">
+                <h2 id="packModalTitle" class="text-lg font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-boxes-stacked text-zinc-300"></i><span>Nieuw Pack</span>
+                </h2>
+                <button onclick="closePackModal()" class="text-zinc-400 hover:text-white p-2 rounded-lg transition-colors cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-5">
+                <input type="hidden" id="packId">
+                <div>
+                    <label class="block text-xs font-medium text-zinc-300 mb-1.5">Pack naam <span class="text-red-500">*</span></label>
+                    <input type="text" id="packNameInput" placeholder="Bijv. Politie Starterspack"
+                        class="w-full px-4 py-3 bg-zinc-800/80 border border-zinc-700 rounded-xl text-sm focus:outline-none focus:border-white transition-colors text-white placeholder-zinc-500 shadow-inner">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-medium text-zinc-300">Producten in dit pack</label>
+                        <span class="text-xs text-zinc-400"><strong id="packCount" class="text-white">0</strong> geselecteerd</span>
+                    </div>
+                    <div id="packChecklist" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-zinc-800 flex justify-end space-x-3 bg-zinc-900">
+                <button type="button" onclick="closePackModal()" class="px-4 py-2.5 rounded-xl border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm font-medium transition-colors cursor-pointer">Annuleren</button>
+                <button type="button" onclick="savePack()" class="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-sm font-semibold transition-colors shadow-lg cursor-pointer">Opslaan</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        // GitHub Pages-versie: alles draait in één statisch HTML-bestand.
-        // De browser bewaart liverygegevens lokaal. Gebruik JSON export/import
-        // om gegevens over te zetten of een back-up te maken.
+        // Alles draait in één statisch HTML-bestand. De browser bewaart gegevens lokaal.
+        // Gebruik JSON export/import om gegevens over te zetten of een back-up te maken.
         let liveries = [];
+        let clothing = [];
+        let packs = [];
         let currentImageBase64 = '';
+        let currentView = 'liveries';
+        let clothingDraft = { shirtImg: '', pantsImg: '' };
+        let currentProduct = null;   // { type: 'l' | 'c' | 'p', item }
+        let customerMode = false;
+        let hubFilter = 'all';
+        let hubSelected = new Set();
+        const keyOf = (type, id) => type + ':' + id;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadFromLocalStorage();
-            renderLiveries();
+            switchView('liveries');
+            initFromHash();
         });
 
         function loadFromLocalStorage() {
-            try {
-                const stored = localStorage.getItem('erlc_just_kyan_liveries');
-                if (stored) liveries = JSON.parse(stored);
-            } catch (e) {
-                console.error('Fout bij laden van browseropslag:', e);
-                liveries = [];
-            }
+            try { const s = localStorage.getItem('erlc_just_kyan_liveries'); if (s) liveries = JSON.parse(s); } catch (e) { console.error(e); liveries = []; }
+            try { const s = localStorage.getItem('erlc_just_kyan_clothing'); if (s) clothing = JSON.parse(s); } catch (e) { console.error(e); clothing = []; }
+            try { const s = localStorage.getItem('erlc_just_kyan_packs'); if (s) packs = JSON.parse(s); } catch (e) { console.error(e); packs = []; }
         }
 
         function saveToLocalStorage() {
             try {
-                // Grote Base64-afbeeldingen kunnen de browseropslaglimiet bereiken.
                 localStorage.setItem('erlc_just_kyan_liveries', JSON.stringify(liveries));
+                localStorage.setItem('erlc_just_kyan_clothing', JSON.stringify(clothing));
+                localStorage.setItem('erlc_just_kyan_packs', JSON.stringify(packs));
             } catch (e) {
                 console.error('Fout bij opslaan in browseropslag:', e);
                 showToast('Opslaan mislukt. Exporteer JSON of gebruik kleinere afbeeldingen.', 'error');
             }
         }
 
-        // Modal Controls
+        // ---------- View switching ----------
+        function switchView(view) {
+            currentView = view;
+            const isProd = view === 'product';
+            document.getElementById('viewLiveries').classList.toggle('hidden', view !== 'liveries');
+            document.getElementById('viewClothing').classList.toggle('hidden', view !== 'clothing');
+            document.getElementById('viewProduct').classList.toggle('hidden', !isProd);
+            [['Liveries', 'liveries'], ['Clothing', 'clothing'], ['Product', 'product']].forEach(([n, v]) => {
+                document.getElementById('tab' + n).classList.toggle('tab-active', view === v);
+            });
+            document.getElementById('searchBar').classList.toggle('hidden', isProd);
+            document.getElementById('newBtn').classList.toggle('hidden', isProd);
+            document.getElementById('newBtnLabel').textContent = view === 'liveries' ? 'Nieuwe Livery' : 'Nieuw Uniform';
+            document.getElementById('searchInput').placeholder = view === 'liveries' ? 'Zoek op titel of code naam...' : 'Zoek op naam of ID...';
+            document.getElementById('searchInput').value = '';
+            renderCurrent();
+            updateSelectionBar();
+        }
+
+        function renderCurrent(filter = '') {
+            if (currentView === 'liveries') renderLiveries(filter);
+            else if (currentView === 'clothing') renderClothing(filter);
+            else if (customerMode) { showHubDetail(); renderProductView(); }
+            else showHubList();
+        }
+        function filterCurrent() { renderCurrent(document.getElementById('searchInput').value); }
+        function openNew() { if (currentView === 'liveries') openModal(); else if (currentView === 'clothing') openClothingModal(); }
+
+        // ---------- Overlay helpers ----------
+        function showOverlay(modal) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div.transform').classList.remove('scale-95');
+                modal.querySelector('div.transform').classList.add('scale-100');
+            }, 10);
+        }
+        function hideOverlay(modal) {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div.transform').classList.remove('scale-100');
+            modal.querySelector('div.transform').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // ---------- Livery modal ----------
         function openModal(livery = null) {
-            const modal = document.getElementById('liveryModal');
             const modalTitle = document.getElementById('modalTitle');
-            
-            // Reset form
             document.getElementById('liveryId').value = '';
             document.getElementById('titleInput').value = '';
             document.getElementById('vehicleColorInput').value = '#0055ff';
@@ -270,113 +476,65 @@
                 modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-zinc-300"></i><span>Livery Bewerken</span>`;
                 document.getElementById('liveryId').value = livery.id;
                 document.getElementById('titleInput').value = livery.title;
-                
                 const vColor = livery.vehicleColor || '#0055ff';
                 document.getElementById('vehicleColorInput').value = vColor;
-                try {
-                    document.getElementById('vehicleColorPicker').value = vColor;
-                } catch(e) {}
-
-                document.getElementById('photoInput').value = livery.photo || '';
-                
-                if (livery.photo) {
-                    currentImageBase64 = livery.photo;
-                    showImagePreview(livery.photo);
-                }
-
-                if (livery.codes && livery.codes.length > 0) {
-                    livery.codes.forEach(c => addCodeRow(c.name, c.code));
-                } else {
-                    addCodeRow();
-                }
+                try { document.getElementById('vehicleColorPicker').value = vColor; } catch (e) {}
+                document.getElementById('photoInput').value = (livery.photo && !livery.photo.startsWith('data:')) ? livery.photo : '';
+                if (livery.photo) { currentImageBase64 = livery.photo; showImagePreview(livery.photo); }
+                if (livery.codes && livery.codes.length > 0) livery.codes.forEach(c => addCodeRow(c.name, c.code));
+                else addCodeRow();
             } else {
                 modalTitle.innerHTML = `<i class="fa-solid fa-car-side text-zinc-300"></i><span>Nieuwe Livery Toevoegen</span>`;
                 addCodeRow('Links', '');
                 addCodeRow('Rechts', '');
             }
-
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div.transform').classList.remove('scale-95');
-                modal.querySelector('div.transform').classList.add('scale-100');
-            }, 10);
+            showOverlay(document.getElementById('liveryModal'));
         }
+        function closeModal() { hideOverlay(document.getElementById('liveryModal')); }
 
-        function closeModal() {
-            const modal = document.getElementById('liveryModal');
-            modal.classList.add('opacity-0');
-            modal.querySelector('div.transform').classList.remove('scale-100');
-            modal.querySelector('div.transform').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        }
-
-        // Image Handling
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             if (!file.type.startsWith('image/')) {
                 showToast('Kies een geldig afbeeldingsbestand.', 'error');
                 event.target.value = '';
                 return;
             }
-
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = e => {
                 currentImageBase64 = e.target.result;
                 document.getElementById('photoInput').value = '';
                 showImagePreview(currentImageBase64);
                 showToast('Afbeelding geladen. Sla de livery op om deze in je browser te bewaren.', 'info');
             };
-            reader.onerror = function() {
-                showToast('Afbeelding kon niet worden gelezen.', 'error');
-            };
+            reader.onerror = () => showToast('Afbeelding kon niet worden gelezen.', 'error');
             reader.readAsDataURL(file);
         }
-
         function previewImageFromInput(url) {
-            if (url.trim() !== '') {
-                currentImageBase64 = url;
-                showImagePreview(url);
-            } else {
-                currentImageBase64 = '';
-                hideImagePreview();
-            }
+            if (url.trim() !== '') { currentImageBase64 = url.trim(); showImagePreview(url.trim()); }
+            else { currentImageBase64 = ''; hideImagePreview(); }
         }
-
         function showImagePreview(src) {
-            const container = document.getElementById('imagePreviewContainer');
-            const img = document.getElementById('imagePreview');
-            img.src = src;
-            container.classList.remove('hidden');
+            document.getElementById('imagePreview').src = src;
+            document.getElementById('imagePreviewContainer').classList.remove('hidden');
         }
-
         function clearImage() {
             currentImageBase64 = '';
             document.getElementById('photoInput').value = '';
             document.getElementById('imageFile').value = '';
             hideImagePreview();
         }
-
         function hideImagePreview() {
-            const container = document.getElementById('imagePreviewContainer');
-            const img = document.getElementById('imagePreview');
-            img.src = '';
-            container.classList.add('hidden');
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
         }
 
-        // Dynamic Code Rows Management
         function addCodeRow(name = '', code = '') {
             const container = document.getElementById('codeRowsContainer');
             const rowId = 'row_' + Math.random().toString(36).substring(2, 9);
-            
             const rowDiv = document.createElement('div');
             rowDiv.id = rowId;
             rowDiv.className = 'flex items-center space-x-2 bg-zinc-950 p-3 rounded-xl border border-zinc-800 shadow-inner';
-            
             rowDiv.innerHTML = `
                 <div class="flex-1">
                     <input type="text" placeholder="Naam (bijv. Links, Dak)" value="${escapeHtml(name)}" class="code-name w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:border-white shadow-inner">
@@ -389,96 +547,299 @@
                     <button type="button" onclick="removeCodeRow('${rowId}')" title="Verwijder rij" class="p-2 bg-red-950/40 hover:bg-red-900/50 border border-red-900/50 text-red-400 rounded-lg transition-colors shrink-0 cursor-pointer">
                         <i class="fa-solid fa-trash text-xs"></i>
                     </button>
-                </div>
-            `;
+                </div>`;
             container.appendChild(rowDiv);
         }
+        function removeCodeRow(rowId) { const row = document.getElementById(rowId); if (row) row.remove(); }
 
-        function removeCodeRow(rowId) {
-            const row = document.getElementById(rowId);
-            if (row) {
-                row.remove();
-            }
-        }
-
-        // Save Livery Data
         function saveLivery() {
             const id = document.getElementById('liveryId').value;
             const title = document.getElementById('titleInput').value.trim();
             const vehicleColor = document.getElementById('vehicleColorInput').value.trim() || '#0055ff';
-
             if (!title) {
-                showToast("Vul alstublieft een titel in voor de livery.", "error");
+                showToast('Vul alstublieft een titel in voor de livery.', 'error');
                 document.getElementById('titleInput').focus();
                 return;
             }
-
-            const rowElements = document.querySelectorAll('#codeRowsContainer > div');
             const codes = [];
-            rowElements.forEach(row => {
+            document.querySelectorAll('#codeRowsContainer > div').forEach(row => {
                 const name = row.querySelector('.code-name').value.trim();
                 const code = row.querySelector('.code-value').value.trim();
-                if (name || code) {
-                    codes.push({ name: name || 'Onderdeel', code: code });
-                }
+                if (name || code) codes.push({ name: name || 'Onderdeel', code });
             });
-
             const liveryData = {
                 id: id ? parseInt(id) : Date.now(),
-                title: title,
-                vehicleColor: vehicleColor,
+                title, vehicleColor,
                 photo: currentImageBase64,
-                codes: codes,
+                codes,
                 updatedAt: new Date().toLocaleDateString('nl-NL')
             };
-
             if (id) {
                 const index = liveries.findIndex(l => l.id == id);
-                if (index !== -1) {
-                    liveries[index] = liveryData;
-                }
-                showToast("Livery succesvol bijgewerkt!", "success");
+                if (index !== -1) liveries[index] = liveryData;
+                showToast('Livery succesvol bijgewerkt!', 'success');
             } else {
                 liveries.unshift(liveryData);
-                showToast("Livery succesvol toegevoegd!", "success");
+                showToast('Livery succesvol toegevoegd!', 'success');
             }
-
             saveToLocalStorage();
             renderLiveries();
             closeModal();
         }
 
-        // Delete Livery
         function deleteLivery(id) {
-            if (confirm("Weet je zeker dat je deze livery wilt verwijderen?")) {
+            if (confirm('Weet je zeker dat je deze livery wilt verwijderen?')) {
                 liveries = liveries.filter(l => l.id !== id);
                 saveToLocalStorage();
                 renderLiveries();
-                showToast("Livery verwijderd.", "info");
+                showToast('Livery verwijderd.', 'info');
             }
         }
 
-        // Draagbare, leesbare (niet-versleutelde) JSON-back-up voor GitHub Pages.
-        // Foto's/data-URL's worden mee opgeslagen, zodat de back-up op een ander apparaat werkt.
-        function exportAllJson() {
-            const portableBackup = {
-                format: 'erlc-livery-hub-export',
-                version: 1,
-                exportedAt: new Date().toISOString(),
-                liveries: liveries
-            };
-            const blob = new Blob([JSON.stringify(portableBackup, null, 2)], {
-                type: 'application/json;charset=utf-8'
+        // ---------- Clothing modal ----------
+        function openClothingModal(item = null) {
+            document.getElementById('clothingId').value = '';
+            document.getElementById('clothingTitleInput').value = '';
+            document.getElementById('shirtIdInput').value = '';
+            document.getElementById('pantsIdInput').value = '';
+            document.getElementById('shirtFile').value = '';
+            document.getElementById('pantsFile').value = '';
+            clothingDraft = { shirtImg: '', pantsImg: '' };
+
+            const title = document.getElementById('clothingModalTitle');
+            if (item) {
+                title.innerHTML = `<i class="fa-solid fa-pen-to-square text-zinc-300"></i><span>Uniform Bewerken</span>`;
+                document.getElementById('clothingId').value = item.id;
+                document.getElementById('clothingTitleInput').value = item.title;
+                document.getElementById('shirtIdInput').value = item.shirtId || '';
+                document.getElementById('pantsIdInput').value = item.pantsId || '';
+                clothingDraft.shirtImg = item.shirtImg || '';
+                clothingDraft.pantsImg = item.pantsImg || '';
+            } else {
+                title.innerHTML = `<i class="fa-solid fa-shirt text-zinc-300"></i><span>Nieuw Uniform Toevoegen</span>`;
+            }
+            updateClothingPreview();
+            showOverlay(document.getElementById('clothingModal'));
+        }
+        function closeClothingModal() { hideOverlay(document.getElementById('clothingModal')); }
+
+        function updateClothingPreview() {
+            [['shirt', clothingDraft.shirtImg], ['pants', clothingDraft.pantsImg]].forEach(([kind, src]) => {
+                const img = document.getElementById(kind + 'Preview');
+                const empty = document.getElementById(kind + 'PreviewEmpty');
+                if (src) { img.src = src; img.classList.remove('hidden'); empty.classList.add('hidden'); }
+                else { img.src = ''; img.classList.add('hidden'); empty.classList.remove('hidden'); }
             });
-            const url = URL.createObjectURL(blob);
+        }
+
+        function handleClothingUpload(event, kind) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Kies een geldig PNG-bestand.', 'error');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                clothingDraft[kind + 'Img'] = e.target.result;
+                updateClothingPreview();
+                showToast((kind === 'shirt' ? 'Shirt' : 'Broek') + ' PNG geladen.', 'info');
+            };
+            reader.onerror = () => showToast('Afbeelding kon niet worden gelezen.', 'error');
+            reader.readAsDataURL(file);
+        }
+        function clearClothingImage(kind) {
+            clothingDraft[kind + 'Img'] = '';
+            document.getElementById(kind + 'File').value = '';
+            updateClothingPreview();
+        }
+
+        function saveClothing() {
+            const id = document.getElementById('clothingId').value;
+            const title = document.getElementById('clothingTitleInput').value.trim();
+            if (!title) {
+                showToast('Vul een naam in voor de outfit.', 'error');
+                document.getElementById('clothingTitleInput').focus();
+                return;
+            }
+            const data = {
+                id: id ? parseInt(id) : Date.now(),
+                title,
+                shirtId: document.getElementById('shirtIdInput').value.trim(),
+                pantsId: document.getElementById('pantsIdInput').value.trim(),
+                shirtImg: clothingDraft.shirtImg,
+                pantsImg: clothingDraft.pantsImg,
+                updatedAt: new Date().toLocaleDateString('nl-NL')
+            };
+            if (id) {
+                const index = clothing.findIndex(c => c.id == id);
+                if (index !== -1) clothing[index] = data;
+                showToast('Uniform bijgewerkt!', 'success');
+            } else {
+                clothing.unshift(data);
+                showToast('Uniform toegevoegd!', 'success');
+            }
+            saveToLocalStorage();
+            renderClothing();
+            closeClothingModal();
+        }
+        function editClothing(id) { const item = clothing.find(c => c.id === id); if (item) openClothingModal(item); }
+        function deleteClothing(id) {
+            if (confirm('Weet je zeker dat je dit uniform wilt verwijderen?')) {
+                clothing = clothing.filter(c => c.id !== id);
+                saveToLocalStorage();
+                renderClothing();
+                showToast('Uniform verwijderd.', 'info');
+            }
+        }
+
+        function downloadClothingPng(id, kind) {
+            const item = clothing.find(c => c.id === id);
+            if (!item) return;
+            const src = kind === 'shirt' ? item.shirtImg : item.pantsImg;
+            if (!src) { showToast('Geen PNG aanwezig.', 'error'); return; }
             const a = document.createElement('a');
-            a.href = url;
-            a.download = 'erlc-liveries-decrypted.json';
+            a.href = src;
+            a.download = `${safeName(item.title)}_${kind === 'shirt' ? 'shirt' : 'broek'}.png`;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            showToast('Leesbare JSON-back-up met liveries geëxporteerd.', 'success');
+        }
+
+        // ---------- Back-up ----------
+        function bytesToBase64(bytes) {
+            let binary = '';
+            bytes.forEach(byte => binary += String.fromCharCode(byte));
+            return btoa(binary);
+        }
+        function base64ToBytes(value) {
+            const binary = atob(value);
+            return Uint8Array.from(binary, char => char.charCodeAt(0));
+        }
+        async function deriveBackupKey(password, salt) {
+            const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+            return crypto.subtle.deriveKey(
+                { name: 'PBKDF2', salt, iterations: 250000, hash: 'SHA-256' },
+                material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+            );
+        }
+        function generateBackupPassword() {
+            const bytes = crypto.getRandomValues(new Uint8Array(24));
+            return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+        function downloadBlob(filename, blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+        function safeName(s) { return String(s).replace(/[^a-z0-9]/gi, '_').toLowerCase(); }
+
+        async function exportAllJson() {
+            if (!liveries.length && !clothing.length && !packs.length) {
+                showToast('Je hebt nog niets om te exporteren.', 'error');
+                return;
+            }
+            try {
+                if (!window.crypto || !crypto.subtle) throw new Error('Versleuteling wordt niet ondersteund in deze browser. Open de site via HTTPS.');
+                const password = generateBackupPassword();
+                const backup = {
+                    format: 'erlc-livery-hub-encrypted-backup',
+                    version: 2,
+                    cipher: 'AES-GCM-256',
+                    kdf: 'PBKDF2-SHA256',
+                    iterations: 250000,
+                    salt: null, iv: null, ciphertext: null,
+                    // Gemak: de sleutel zit in hetzelfde bestand. Dit is geen sterke beveiliging.
+                    autoKey: password
+                };
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const key = await deriveBackupKey(password, salt);
+                const plaintext = new TextEncoder().encode(JSON.stringify({
+                    format: 'erlc-livery-hub-export',
+                    version: 2,
+                    exportedAt: new Date().toISOString(),
+                    liveries, clothing, packs
+                }));
+                const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+                backup.salt = bytesToBase64(salt);
+                backup.iv = bytesToBase64(iv);
+                backup.ciphertext = bytesToBase64(new Uint8Array(encrypted));
+                downloadBlob('erlc-hub-encrypted.json', new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' }));
+                showToast('Versleutelde JSON-back-up gedownload.', 'success');
+            } catch (error) {
+                showToast('Export mislukt: ' + (error.message || 'onbekende fout'), 'error');
+            }
+        }
+
+        function downloadLiveryJson(id) {
+            const item = liveries.find(l => l.id === id);
+            if (!item) return;
+            const payload = { format: 'erlc-livery-hub-export', version: 2, exportedAt: new Date().toISOString(), liveries: [item], clothing: [] };
+            downloadBlob(`${safeName(item.title)}_livery.json`, new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }));
+            showToast('Livery JSON (onversleuteld) gedownload.', 'success');
+        }
+        function downloadClothingJson(id) {
+            const item = clothing.find(c => c.id === id);
+            if (!item) return;
+            const payload = { format: 'erlc-livery-hub-export', version: 2, exportedAt: new Date().toISOString(), liveries: [], clothing: [item] };
+            downloadBlob(`${safeName(item.title)}_uniform.json`, new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }));
+            showToast('Uniform JSON (onversleuteld) gedownload.', 'success');
+        }
+
+        function normalizeLiveries(list) {
+            return list.map((item, index) => {
+                if (!item || typeof item !== 'object' || !item.title) throw new Error('Livery #' + (index + 1) + ' is ongeldig.');
+                return {
+                    id: item.id ?? (Date.now() + index),
+                    title: String(item.title),
+                    vehicleColor: String(item.vehicleColor || '#0055ff'),
+                    photo: item.photo || '',
+                    codes: Array.isArray(item.codes) ? item.codes.map(c => ({ name: String(c.name || 'Onderdeel'), code: String(c.code || '') })) : [],
+                    updatedAt: String(item.updatedAt || '')
+                };
+            });
+        }
+        function normalizeClothing(list) {
+            return list.map((item, index) => {
+                if (!item || typeof item !== 'object' || !item.title) throw new Error('Uniform #' + (index + 1) + ' is ongeldig.');
+                return {
+                    id: item.id ?? (Date.now() + index + 500),
+                    title: String(item.title),
+                    shirtId: String(item.shirtId || ''),
+                    pantsId: String(item.pantsId || ''),
+                    shirtImg: item.shirtImg || '',
+                    pantsImg: item.pantsImg || '',
+                    updatedAt: String(item.updatedAt || '')
+                };
+            });
+        }
+        function normalizePacks(list) {
+            return list.map((p, index) => {
+                if (!p || typeof p !== 'object' || !p.title) throw new Error('Pack #' + (index + 1) + ' is ongeldig.');
+                return {
+                    id: p.id ?? (Date.now() + index + 900),
+                    title: String(p.title),
+                    items: Array.isArray(p.items) ? p.items.filter(r => r && (r.type === 'l' || r.type === 'c')).map(r => ({ type: r.type, id: r.id })) : [],
+                    updatedAt: String(p.updatedAt || '')
+                };
+            });
+        }
+        function mergeById(existing, additions) {
+            const ids = new Set(existing.map(i => String(i.id)));
+            const added = additions.map((item, index) => {
+                const copy = { ...item };
+                if (ids.has(String(copy.id))) copy.id = Date.now() + index + Math.floor(Math.random() * 100000);
+                ids.add(String(copy.id));
+                return copy;
+            });
+            return [...added, ...existing];
         }
 
         async function importAllJson(event) {
@@ -486,45 +847,51 @@
             if (!file) return;
             try {
                 const parsed = JSON.parse(await file.text());
-                // Ondersteun zowel oude exports (array) als het nieuwe draagbare formaat.
-                const imported = Array.isArray(parsed) ? parsed : parsed.liveries;
-                if (!Array.isArray(imported)) throw new Error('Dit JSON-bestand bevat geen geldige liveries.');
-                const normalized = imported.map((item, index) => {
-                    if (!item || typeof item !== 'object' || !item.title) {
-                        throw new Error('Livery #' + (index + 1) + ' is ongeldig.');
+                let importedLiveries, importedClothing = [], importedPacks = [];
+                if (parsed && parsed.format === 'erlc-livery-hub-encrypted-backup') {
+                    const password = parsed.autoKey || prompt('Deze back-up heeft geen ingebouwde sleutel. Voer het exportwachtwoord in:');
+                    if (password === null) return;
+                    if (!window.crypto || !crypto.subtle) throw new Error('Versleuteling wordt niet ondersteund. Open de site via HTTPS.');
+                    try {
+                        const salt = base64ToBytes(parsed.salt);
+                        const iv = base64ToBytes(parsed.iv);
+                        const key = await deriveBackupKey(password, salt);
+                        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, base64ToBytes(parsed.ciphertext));
+                        const payload = JSON.parse(new TextDecoder().decode(decrypted));
+                        importedLiveries = payload.liveries || [];
+                        importedClothing = payload.clothing || [];
+                        importedPacks = payload.packs || [];
+                    } catch (_) {
+                        throw new Error('Verkeerd wachtwoord of beschadigd JSON-bestand.');
                     }
-                    return {
-                        id: item.id ?? (Date.now() + index),
-                        title: String(item.title),
-                        vehicleColor: String(item.vehicleColor || '#0055ff'),
-                        photo: item.photo || '',
-                        codes: Array.isArray(item.codes) ? item.codes.map(c => ({
-                            name: String(c.name || 'Onderdeel'),
-                            code: String(c.code || '')
-                        })) : [],
-                        updatedAt: String(item.updatedAt || '')
-                    };
-                });
+                } else {
+                    importedLiveries = Array.isArray(parsed) ? parsed : (parsed.liveries || []);
+                    importedClothing = Array.isArray(parsed) ? [] : (parsed.clothing || []);
+                    importedPacks = Array.isArray(parsed) ? [] : (parsed.packs || []);
+                }
+
+                if (!Array.isArray(importedLiveries) || !Array.isArray(importedClothing)) throw new Error('Dit JSON-bestand bevat geen geldige gegevens.');
+                const nl = normalizeLiveries(importedLiveries);
+                const nc = normalizeClothing(importedClothing);
+                const np = normalizePacks(Array.isArray(importedPacks) ? importedPacks : []);
+                if (!nl.length && !nc.length && !np.length) throw new Error('Dit JSON-bestand bevat geen liveries of uniforms.');
 
                 const merge = confirm(
-                    'Klik OK om de liveries samen te voegen met je huidige verzameling.\n' +
-                    'Klik Annuleren om je huidige verzameling te vervangen.'
+                    'Klik OK om de gegevens samen te voegen met je huidige verzameling.\n' +
+                    'Klik Annuleren om je huidige verzameling te vervangen (alleen de onderdelen die in het bestand staan).'
                 );
                 if (merge) {
-                    const ids = new Set(liveries.map(item => String(item.id)));
-                    const additions = normalized.map((item, index) => {
-                        const copy = { ...item };
-                        if (ids.has(String(copy.id))) copy.id = Date.now() + index + Math.floor(Math.random() * 100000);
-                        ids.add(String(copy.id));
-                        return copy;
-                    });
-                    liveries = [...additions, ...liveries];
+                    liveries = mergeById(liveries, nl);
+                    clothing = mergeById(clothing, nc);
+                    packs = mergeById(packs, np);
                 } else {
-                    liveries = normalized;
+                    if (nl.length) liveries = nl;
+                    if (nc.length) clothing = nc;
+                    if (np.length) packs = np;
                 }
                 saveToLocalStorage();
-                renderLiveries();
-                showToast(imported.length + ' liveries succesvol geïmporteerd.', 'success');
+                renderCurrent();
+                showToast(nl.length + ' liveries en ' + nc.length + ' uniforms' + (np.length ? ' en ' + np.length + ' packs' : '') + ' geïmporteerd.', 'success');
             } catch (error) {
                 showToast('JSON import mislukt: ' + (error.message || 'ongeldig bestand'), 'error');
             } finally {
@@ -532,108 +899,293 @@
             }
         }
 
-        // EXPORT FUNCTIONS: PNG & TXT
+        // ---------- Livery exports: TXT & PNG ----------
         function exportLiveryTxt(id) {
             const livery = liveries.find(l => l.id === id);
             if (!livery) return;
-
-            let content = `=== ERLC LIVERY CODES ===\n`;
-            content += `Titel: ${livery.title}\n`;
-            content += `Voertuig Kleur: ${livery.vehicleColor || 'Onbekend'}\n`;
-            content += `Laatst gewijzigd: ${livery.updatedAt || 'Onbekend'}\n`;
-            content += `----------------------------------------\n\n`;
-            
-            if (livery.codes && livery.codes.length > 0) {
-                livery.codes.forEach(c => {
-                    content += `${c.name}: ${c.code || 'Geen code'}\n`;
-                });
-            } else {
-                content += `Geen codes beschikbaar.\n`;
-            }
-
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${livery.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_codes.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("TXT-bestand succesvol geëxporteerd!", "success");
+            const codes = livery.codes || [];
+            const w = Math.max(8, ...codes.map(c => c.name.length)) + 2;
+            const lines = [
+                '=== ERLC LIVERY CODES ===',
+                `Titel: ${livery.title}`,
+                `Voertuig kleur: ${livery.vehicleColor || 'Onbekend'}`,
+                `Laatst gewijzigd: ${livery.updatedAt || 'Onbekend'}`,
+                '----------------------------------------',
+                ''
+            ];
+            if (codes.length) codes.forEach(c => lines.push((c.name + ':').padEnd(w) + (c.code || 'Geen code')));
+            else lines.push('Geen codes beschikbaar.');
+            downloadBlob(`${safeName(livery.title)}_codes.txt`, new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' }));
+            showToast('TXT-bestand succesvol geëxporteerd!', 'success');
         }
 
-        function exportLiveryPng(id) {
+        function loadImageEl(src) {
+            return new Promise(resolve => {
+                if (!src) return resolve(null);
+                const img = new Image();
+                if (!String(src).startsWith('data:')) img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+
+        function rrPath(ctx, x, y, w, h, r) {
+            r = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        function fitText(ctx, text, maxW) {
+            text = String(text);
+            if (ctx.measureText(text).width <= maxW) return text;
+            while (text.length > 1 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1);
+            return text + '…';
+        }
+
+        function drawChecker(ctx, x, y, w, h) {
+            const s = 20;
+            for (let yy = 0; yy < h; yy += s) {
+                for (let xx = 0; xx < w; xx += s) {
+                    ctx.fillStyle = ((xx / s + yy / s) % 2 === 0) ? '#101012' : '#18181b';
+                    ctx.fillRect(x + xx, y + yy, Math.min(s, w - xx), Math.min(s, h - yy));
+                }
+            }
+        }
+
+        async function renderExportCard(cfg) {
+            if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (_) {} }
+            const W = 1000, P = 44, INNER = W - P * 2, SCALE = 2;
+            const hasImgs = (cfg.images || []).length > 0;
+
+            let y = P;
+            const headerH = 84;
+            y += cfg.minimal ? 0 : headerH + 24;
+            let imgBlock = null;
+            if (hasImgs) {
+                if (cfg.images.length === 1) {
+                    const im = cfg.images[0].img;
+                    const h = im ? Math.max(260, Math.min(620, Math.round(INNER * im.naturalHeight / im.naturalWidth))) : 0;
+                    imgBlock = { h, cols: 1 };
+                } else {
+                    imgBlock = { h: 460, cols: cfg.images.length };
+                }
+                if (imgBlock.h) { imgBlock.y = y; y += imgBlock.h + 28; }
+            }
+            const rowH = 68, rowGap = 14;
+            const rowsY = y;
+            const rows = cfg.rows || [];
+            y += rows.length * (rowH + rowGap);
+            if (!rows.length) y += 10;
+            const footerH = 30;
+            y += cfg.minimal ? P - 14 : 6 + footerH + P - 14;
+            const H = Math.ceil(y);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = W * SCALE;
+            canvas.height = H * SCALE;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(SCALE, SCALE);
+            ctx.imageSmoothingQuality = 'high';
+            ctx.textBaseline = 'middle';
+
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = '#27272a';
+            ctx.lineWidth = 2;
+            rrPath(ctx, 1, 1, W - 2, H - 2, 28);
+            ctx.stroke();
+
+            const cy = P + 34;
+            if (!cfg.minimal) {
+                let tx = P;
+                if (cfg.badgeColor) {
+                    ctx.fillStyle = cfg.badgeColor;
+                    ctx.beginPath(); ctx.arc(P + 24, cy, 24, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+                    tx = P + 70;
+                }
+                let rightW = 0;
+                if (cfg.badgeText) {
+                    ctx.font = '500 22px "JetBrains Mono", ui-monospace, Consolas, monospace';
+                    rightW = ctx.measureText(cfg.badgeText).width + 8;
+                    ctx.fillStyle = '#a1a1aa';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(cfg.badgeText, W - P, cy - 8);
+                    ctx.textAlign = 'left';
+                }
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '700 44px Inter, system-ui, sans-serif';
+                ctx.fillText(fitText(ctx, cfg.title, W - P - tx - rightW - 16), tx, cy - 8);
+                ctx.fillStyle = '#a1a1aa';
+                ctx.font = '400 22px Inter, system-ui, sans-serif';
+                ctx.fillText(cfg.subtitle || '', tx, cy + 30);
+            }
+
+            if (imgBlock && imgBlock.h) {
+                const gap = 20;
+                const n = imgBlock.cols;
+                const bw = (INNER - gap * (n - 1)) / n;
+                for (let i = 0; i < n; i++) {
+                    const bx = P + i * (bw + gap), by = imgBlock.y, bh = imgBlock.h;
+                    ctx.save();
+                    rrPath(ctx, bx, by, bw, bh, 20);
+                    ctx.clip();
+                    if (cfg.checker) drawChecker(ctx, bx, by, bw, bh);
+                    else { ctx.fillStyle = '#09090b'; ctx.fillRect(bx, by, bw, bh); }
+                    const item = cfg.images[i];
+                    if (item.img) {
+                        const im = item.img;
+                        const pad = n > 1 ? 16 : 0;
+                        const sc = Math.min((bw - pad * 2) / im.naturalWidth, (bh - pad * 2) / im.naturalHeight);
+                        const dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+                        ctx.drawImage(im, bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh);
+                    } else {
+                        ctx.fillStyle = '#52525b';
+                        ctx.font = '500 22px Inter, system-ui, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Geen afbeelding', bx + bw / 2, by + bh / 2);
+                        ctx.textAlign = 'left';
+                    }
+                    ctx.restore();
+                    ctx.strokeStyle = '#3f3f46'; ctx.lineWidth = 2;
+                    rrPath(ctx, bx + 1, by + 1, bw - 2, bh - 2, 20); ctx.stroke();
+                    if (item.label) {
+                        ctx.font = '600 18px Inter, system-ui, sans-serif';
+                        const lw = ctx.measureText(item.label).width + 24;
+                        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                        rrPath(ctx, bx + 14, by + bh - 46, lw, 32, 10); ctx.fill();
+                        ctx.fillStyle = '#e4e4e7';
+                        ctx.fillText(item.label, bx + 26, by + bh - 30);
+                    }
+                }
+            }
+
+            rows.forEach((r, i) => {
+                const ry = rowsY + i * (rowH + rowGap);
+                ctx.fillStyle = '#09090b';
+                rrPath(ctx, P, ry, INNER, rowH, 18); ctx.fill();
+                ctx.strokeStyle = '#27272a'; ctx.lineWidth = 2;
+                rrPath(ctx, P + 1, ry + 1, INNER - 2, rowH - 2, 18); ctx.stroke();
+                const mid = ry + rowH / 2;
+                ctx.font = '600 26px Inter, system-ui, sans-serif';
+                ctx.fillStyle = '#a1a1aa';
+                ctx.textAlign = 'left';
+                ctx.fillText(fitText(ctx, r.label, INNER * 0.4), P + 28, mid);
+                ctx.font = '600 28px "JetBrains Mono", ui-monospace, Consolas, monospace';
+                ctx.fillStyle = r.value ? '#f4f4f5' : '#52525b';
+                ctx.textAlign = 'right';
+                ctx.fillText(fitText(ctx, r.value || 'Geen code', INNER * 0.5), W - P - 28, mid);
+                ctx.textAlign = 'left';
+            });
+
+            ctx.font = '400 18px Inter, system-ui, sans-serif';
+            ctx.fillStyle = '#52525b';
+            if (!cfg.minimal) ctx.fillText(cfg.footer || 'ERLC Hub', P, H - P + 6);
+
+            return canvas;
+        }
+
+        function downloadCanvas(canvas, filename) {
+            canvas.toBlob(blob => {
+                if (!blob) { showToast('Fout bij genereren van PNG.', 'error'); return; }
+                downloadBlob(filename, blob);
+                showToast('PNG-afbeelding succesvol geëxporteerd!', 'success');
+            }, 'image/png');
+        }
+
+        async function exportLiveryPng(id) {
             const livery = liveries.find(l => l.id === id);
             if (!livery) return;
-
-            // Populate hidden export template
-            document.getElementById('exportCardTitle').textContent = livery.title;
-            document.getElementById('exportCardColorBadge').style.backgroundColor = livery.vehicleColor || '#0055ff';
-            
-            const imgEl = document.getElementById('exportCardImg');
-            if (livery.photo) {
-                imgEl.src = livery.photo;
-                document.getElementById('exportCardImageContainer').style.display = 'block';
-            } else {
-                document.getElementById('exportCardImageContainer').style.display = 'none';
+            showToast('PNG export voorbereiden...', 'info');
+            try {
+                const img = livery.photo ? await loadImageEl(livery.photo) : null;
+                const cfg = {
+                    title: livery.title,
+                    subtitle: 'ERLC Hub',
+                    badgeColor: livery.vehicleColor || '#0055ff',
+                    badgeText: livery.vehicleColor || '',
+                    images: img ? [{ img }] : [],
+                    rows: (livery.codes || []).map(c => ({ label: c.name, value: c.code })),
+                    footer: 'ERLC Hub  •  ' + (livery.updatedAt || new Date().toLocaleDateString('nl-NL'))
+                };
+                const canvas = await renderExportCard(cfg);
+                try { canvas.toDataURL('image/png', 0.1); }
+                catch (_) {
+                    cfg.images = [];
+                    const clean = await renderExportCard(cfg);
+                    showToast('Foto van externe site staat export niet toe. Upload de foto als bestand voor een export mét foto.', 'error');
+                    downloadCanvas(clean, `${safeName(livery.title)}_livery.png`);
+                    return;
+                }
+                if (livery.photo && !img) showToast('Foto kon niet geladen worden. Export zonder foto.', 'error');
+                downloadCanvas(canvas, `${safeName(livery.title)}_livery.png`);
+            } catch (err) {
+                console.error(err);
+                showToast('Fout bij genereren van PNG.', 'error');
             }
-
-            const listEl = document.getElementById('exportCardCodesList');
-            let codesHtml = '';
-            if (livery.codes && livery.codes.length > 0) {
-                livery.codes.forEach(c => {
-                    codesHtml += `
-                        <div class="flex items-center justify-between bg-zinc-950 px-4 py-2.5 rounded-xl border border-zinc-800">
-                            <span class="text-sm font-medium text-zinc-400">${escapeHtml(c.name)}</span>
-                            <code class="text-sm font-mono text-zinc-200">${escapeHtml(c.code || 'Geen code')}</code>
-                        </div>
-                    `;
-                });
-            } else {
-                codesHtml = `<p class="text-xs text-zinc-500 italic">Geen codes toegevoegd</p>`;
-            }
-            listEl.innerHTML = codesHtml;
-
-            const exportTarget = document.getElementById('exportCardContent');
-            
-            showToast("PNG export voorbereiden...", "info");
-
-            setTimeout(() => {
-                html2canvas(exportTarget, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#18181b'
-                }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = `${livery.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_livery.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                    showToast("PNG-afbeelding succesvol geëxporteerd!", "success");
-                }).catch(err => {
-                    console.error(err);
-                    showToast("Fout bij genereren van PNG.", "error");
-                });
-            }, 300);
         }
 
-        // Render Liveries Grid
+        async function exportClothingCard(id) {
+            const item = clothing.find(c => c.id === id);
+            if (!item) return;
+            showToast('PNG export voorbereiden...', 'info');
+            try {
+                const [shirt, pants] = await Promise.all([loadImageEl(item.shirtImg), loadImageEl(item.pantsImg)]);
+                const canvas = await renderExportCard({
+                    title: item.title,
+                    subtitle: 'ERLC Uniform',
+                    images: [{ img: shirt, label: 'Shirt' }, { img: pants, label: 'Broek' }],
+                    checker: true,
+                    rows: [
+                        { label: 'Shirt ID', value: item.shirtId || '' },
+                        { label: 'Broek ID', value: item.pantsId || '' }
+                    ],
+                    footer: 'ERLC Hub  •  ' + (item.updatedAt || new Date().toLocaleDateString('nl-NL'))
+                });
+                downloadCanvas(canvas, `${safeName(item.title)}_uniform.png`);
+            } catch (err) {
+                console.error(err);
+                showToast('Fout bij genereren van PNG.', 'error');
+            }
+        }
+
+        function exportClothingTxt(id) {
+            const item = clothing.find(c => c.id === id);
+            if (!item) return;
+            const lines = [
+                '=== ERLC UNIFORM ===',
+                `Naam: ${item.title}`,
+                `Laatst gewijzigd: ${item.updatedAt || 'Onbekend'}`,
+                '----------------------------------------',
+                '',
+                `Shirt ID: ${item.shirtId || 'Geen ID'}`,
+                `Broek ID: ${item.pantsId || 'Geen ID'}`
+            ];
+            downloadBlob(`${safeName(item.title)}_uniform.txt`, new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' }));
+            showToast('TXT-bestand succesvol geëxporteerd!', 'success');
+        }
+
+        // ---------- Render liveries ----------
         function renderLiveries(filterText = '') {
             const grid = document.getElementById('liveryGrid');
             const emptyState = document.getElementById('emptyState');
-            const totalCount = document.getElementById('totalCount');
+            document.getElementById('totalCount').textContent = liveries.length;
 
             let filtered = liveries;
             if (filterText.trim() !== '') {
                 const query = filterText.toLowerCase();
-                filtered = liveries.filter(l => 
-                    l.title.toLowerCase().includes(query) || 
-                    l.vehicleColor?.toLowerCase().includes(query) ||
+                filtered = liveries.filter(l =>
+                    l.title.toLowerCase().includes(query) ||
+                    (l.vehicleColor || '').toLowerCase().includes(query) ||
                     l.codes.some(c => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query))
                 );
             }
-
-            totalCount.textContent = liveries.length;
 
             if (filtered.length === 0) {
                 grid.innerHTML = '';
@@ -641,7 +1193,6 @@
                 emptyState.classList.add('flex');
                 return;
             }
-
             emptyState.classList.remove('flex');
             emptyState.classList.add('hidden');
 
@@ -649,7 +1200,6 @@
             filtered.forEach(livery => {
                 const photoSrc = livery.photo ? livery.photo : 'https://placehold.co/600x400/18181b/27272a?text=Geen+Foto';
                 const vColor = livery.vehicleColor || '#0055ff';
-                
                 let codesHtml = '';
                 if (livery.codes && livery.codes.length > 0) {
                     livery.codes.forEach(c => {
@@ -658,12 +1208,11 @@
                                 <span class="text-xs font-medium text-zinc-400">${escapeHtml(c.name)}</span>
                                 <div class="flex items-center space-x-2">
                                     <code class="text-xs font-mono text-zinc-200 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">${escapeHtml(c.code || 'Geen code')}</code>
-                                    <button onclick="copyToClipboard('${escapeHtml(c.code)}', this)" class="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer" title="Kopieer code">
+                                    <button data-code="${escapeHtml(c.code)}" onclick="copyToClipboard(this.dataset.code, this)" class="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer" title="Kopieer code">
                                         <i class="fa-regular fa-copy text-xs"></i>
                                     </button>
                                 </div>
-                            </div>
-                        `;
+                            </div>`;
                     });
                 } else {
                     codesHtml = `<p class="text-xs text-zinc-500 italic">Geen codes toegevoegd</p>`;
@@ -671,168 +1220,631 @@
 
                 html += `
                     <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col transition-all hover:border-zinc-700 backdrop-blur-sm">
-                        <!-- Image banner -->
                         <div class="relative h-48 w-full bg-zinc-950 overflow-hidden group">
-                            <img src="${photoSrc}" alt="${escapeHtml(livery.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/18181b/27272a?text=Fout+bij+laden'">
+                            <img src="${escapeHtml(photoSrc)}" alt="${escapeHtml(livery.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/18181b/27272a?text=Fout+bij+laden'">
                             <div class="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent opacity-80"></div>
-                            
-                            <!-- Vehicle Color Badge top-left -->
                             <div class="absolute top-3 left-3 flex items-center space-x-2 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 shadow">
                                 <span class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0" style="background-color: ${escapeHtml(vColor)};"></span>
                                 <span class="text-xs font-mono text-zinc-300">${escapeHtml(vColor)}</span>
                             </div>
-
                             <div class="absolute top-3 right-3 flex space-x-1 bg-black/70 backdrop-blur-md p-1.5 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="editLivery(${livery.id})" class="p-1.5 text-zinc-300 hover:text-white transition-colors cursor-pointer" title="Bewerken">
-                                    <i class="fa-solid fa-pen text-xs"></i>
-                                </button>
-                                <button onclick="deleteLivery(${livery.id})" class="p-1.5 text-red-400 hover:text-red-300 transition-colors cursor-pointer" title="Verwijderen">
-                                    <i class="fa-solid fa-trash text-xs"></i>
-                                </button>
+                                <button onclick="editLivery(${livery.id})" class="p-1.5 text-zinc-300 hover:text-white transition-colors cursor-pointer" title="Bewerken"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="deleteLivery(${livery.id})" class="p-1.5 text-red-400 hover:text-red-300 transition-colors cursor-pointer" title="Verwijderen"><i class="fa-solid fa-trash text-xs"></i></button>
                             </div>
-
-                            <span class="absolute bottom-3 left-3 text-xs text-zinc-300 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow">
-                                ${livery.updatedAt || 'Onbekend'}
-                            </span>
+                            <span class="absolute bottom-3 left-3 text-xs text-zinc-300 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow">${escapeHtml(livery.updatedAt || 'Onbekend')}</span>
                         </div>
 
-                        <!-- Content Body -->
                         <div class="p-5 flex-grow flex flex-col justify-between space-y-4">
                             <div>
                                 <h3 class="text-base font-bold text-white mb-3">${escapeHtml(livery.title)}</h3>
-                                <div class="space-y-2">
-                                    ${codesHtml}
-                                </div>
+                                <div class="space-y-2">${codesHtml}</div>
                             </div>
-
-                            <!-- Actions footer inside card -->
                             <div class="pt-3 border-t border-zinc-800 flex flex-col space-y-2">
                                 <div class="flex items-center justify-between">
                                     <button onclick="editLivery(${livery.id})" class="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                        <span>Bewerken</span>
+                                        <i class="fa-solid fa-pen-to-square"></i><span>Bewerken</span>
                                     </button>
                                     <button onclick="deleteLivery(${livery.id})" class="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1.5 transition-colors cursor-pointer">
-                                        <i class="fa-solid fa-trash"></i>
-                                        <span>Verwijderen</span>
+                                        <i class="fa-solid fa-trash"></i><span>Verwijderen</span>
                                     </button>
                                 </div>
-                                <!-- Export Buttons -->
-                                <div class="grid grid-cols-2 gap-2 pt-1">
-                                    <button onclick="exportLiveryPng(${livery.id})" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
-                                        <i class="fa-solid fa-image text-xs"></i>
-                                        <span>Export PNG</span>
+                                <div class="grid grid-cols-3 gap-2 pt-1">
+                                    <button onclick="exportLiveryPng(${livery.id})" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-image text-xs"></i><span>PNG</span>
                                     </button>
-                                    <button onclick="exportLiveryTxt(${livery.id})" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
-                                        <i class="fa-solid fa-file-lines text-xs"></i>
-                                        <span>Export TXT</span>
+                                    <button onclick="exportLiveryTxt(${livery.id})" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-file-lines text-xs"></i><span>TXT</span>
+                                    </button>
+                                    <button onclick="downloadLiveryJson(${livery.id})" title="Download onversleuteld JSON" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-file-code text-xs"></i><span>JSON</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
-
             grid.innerHTML = html;
         }
 
-        function filterLiveries() {
-            const query = document.getElementById('searchInput').value;
-            renderLiveries(query);
-        }
+        function editLivery(id) { const livery = liveries.find(l => l.id === id); if (livery) openModal(livery); }
 
-        function editLivery(id) {
-            const livery = liveries.find(l => l.id === id);
-            if (livery) {
-                openModal(livery);
+        // ---------- Render clothing ----------
+        function renderClothing(filterText = '') {
+            const grid = document.getElementById('clothingGrid');
+            const emptyState = document.getElementById('clothingEmptyState');
+            document.getElementById('totalCount').textContent = clothing.length;
+
+            let filtered = clothing;
+            if (filterText.trim() !== '') {
+                const q = filterText.toLowerCase();
+                filtered = clothing.filter(c =>
+                    c.title.toLowerCase().includes(q) ||
+                    String(c.shirtId || '').toLowerCase().includes(q) ||
+                    String(c.pantsId || '').toLowerCase().includes(q)
+                );
             }
-        }
 
-        // Clipboard Helper
-        function copyToClipboard(text, btnElement) {
-            if (!text) {
-                showToast("Geen code aanwezig om te kopiëren.", "error");
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
                 return;
             }
+            emptyState.classList.remove('flex');
+            emptyState.classList.add('hidden');
 
-            const textArea = document.createElement("textarea");
+            const tile = (src, label, icon) => src
+                ? `<img src="${src}" alt="${label}" class="max-w-full max-h-full object-contain">`
+                : `<span class="text-xs text-zinc-500 text-center"><i class="fa-solid ${icon} text-2xl block mb-1"></i>Geen PNG</span>`;
+
+            const idRow = (label, value) => `
+                <div class="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-xl border border-zinc-800 shadow-inner">
+                    <span class="text-xs font-medium text-zinc-400">${label}</span>
+                    <div class="flex items-center space-x-2">
+                        <code class="text-xs font-mono text-zinc-200 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">${escapeHtml(String(value || 'Geen ID'))}</code>
+                        <button data-code="${escapeHtml(String(value || ''))}" onclick="copyToClipboard(this.dataset.code, this)" class="text-zinc-400 hover:text-white p-1 transition-colors cursor-pointer" title="Kopieer ID">
+                            <i class="fa-regular fa-copy text-xs"></i>
+                        </button>
+                    </div>
+                </div>`;
+
+            let html = '';
+            filtered.forEach(c => {
+                html += `
+                    <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col transition-all hover:border-zinc-700 backdrop-blur-sm">
+                        <div class="grid grid-cols-2 gap-px bg-zinc-800">
+                            <div class="relative h-48 checker flex items-center justify-center p-2">
+                                ${tile(c.shirtImg, 'Shirt', 'fa-shirt')}
+                                <span class="absolute bottom-2 left-2 text-[10px] bg-black/70 px-2 py-0.5 rounded-md border border-white/10 text-zinc-300">Shirt</span>
+                            </div>
+                            <div class="relative h-48 checker flex items-center justify-center p-2">
+                                ${tile(c.pantsImg, 'Broek', 'fa-socks')}
+                                <span class="absolute bottom-2 left-2 text-[10px] bg-black/70 px-2 py-0.5 rounded-md border border-white/10 text-zinc-300">Broek</span>
+                            </div>
+                        </div>
+                        <div class="p-5 flex-grow flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-base font-bold text-white">${escapeHtml(c.title)}</h3>
+                                    <span class="text-xs text-zinc-500">${escapeHtml(c.updatedAt || '')}</span>
+                                </div>
+                                <div class="space-y-2">
+                                    ${idRow('Shirt ID', c.shirtId)}
+                                    ${idRow('Broek ID', c.pantsId)}
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-zinc-800 flex flex-col space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <button onclick="editClothing(${c.id})" class="text-xs text-zinc-400 hover:text-white flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-pen-to-square"></i><span>Bewerken</span>
+                                    </button>
+                                    <button onclick="deleteClothing(${c.id})" class="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-trash"></i><span>Verwijderen</span>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 pt-1">
+                                    <button onclick="exportClothingCard(${c.id})" class="col-span-3 px-2 py-1.5 bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-image text-xs"></i><span>Export kaart (PNG)</span>
+                                    </button>
+                                    <button onclick="exportClothingTxt(${c.id})" class="col-span-3 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-file-lines text-xs"></i><span>Export TXT</span>
+                                    </button>
+                                    <button onclick="downloadClothingPng(${c.id}, 'shirt')" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-image text-xs"></i><span>Shirt</span>
+                                    </button>
+                                    <button onclick="downloadClothingPng(${c.id}, 'pants')" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-image text-xs"></i><span>Broek</span>
+                                    </button>
+                                    <button onclick="downloadClothingJson(${c.id})" title="Download onversleuteld JSON" class="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-lg transition-colors flex items-center justify-center space-x-1.5 cursor-pointer">
+                                        <i class="fa-solid fa-file-code text-xs"></i><span>JSON</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        // ---------- Product Hub ----------
+        function showHubList() {
+            document.getElementById('hubList').classList.remove('hidden');
+            document.getElementById('hubDetail').classList.add('hidden');
+            renderHub();
+        }
+        function showHubDetail() {
+            document.getElementById('hubList').classList.add('hidden');
+            document.getElementById('hubDetail').classList.remove('hidden');
+            updateSelectionBar();
+        }
+        function setHubFilter(f) { hubFilter = f; renderHub(); }
+        function openProduct(val) {
+            selectProduct(val);
+            showHubDetail();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleSelect(key, ev) {
+            ev.stopPropagation();
+            if (hubSelected.has(key)) hubSelected.delete(key); else hubSelected.add(key);
+            renderHub();
+        }
+        function clearSelection() { hubSelected.clear(); renderHub(); }
+        function updateSelectionBar() {
+            const bar = document.getElementById('selectionBar');
+            const listVisible = !document.getElementById('hubList').classList.contains('hidden');
+            const show = hubSelected.size > 0 && currentView === 'product' && !customerMode && listVisible;
+            bar.classList.toggle('hidden', !show);
+            bar.classList.toggle('flex', show);
+            document.getElementById('selectionCount').textContent = hubSelected.size + ' geselecteerd';
+        }
+
+        function lookupProduct(key) {
+            const [t, id] = key.split(':');
+            const item = (t === 'l' ? liveries : clothing).find(x => String(x.id) === id);
+            return item ? { type: t, item } : null;
+        }
+        function resolvePack(pack) { return (pack.items || []).map(r => lookupProduct(keyOf(r.type, r.id))).filter(Boolean); }
+        function packEntries(p) { return p.item.snapshot ? p.item.items : resolvePack(p.item); }
+
+        function thumbHtml(type, item, small) {
+            const ic = small ? 'text-sm' : 'text-2xl';
+            if (type === 'l') return item.photo
+                ? `<img src="${escapeHtml(item.photo)}" alt="" class="w-full h-full object-cover" onerror="this.remove()">`
+                : `<i class="fa-solid fa-car-side ${ic} text-zinc-700"></i>`;
+            const src = item.shirtImg || item.pantsImg;
+            return src
+                ? `<div class="checker w-full h-full flex items-center justify-center p-1"><img src="${src}" alt="" class="max-w-full max-h-full object-contain"></div>`
+                : `<i class="fa-solid fa-shirt ${ic} text-zinc-700"></i>`;
+        }
+
+        function renderHub() {
+            const q = (document.getElementById('hubSearch').value || '').trim().toLowerCase();
+            document.getElementById('totalCount').textContent = liveries.length + clothing.length;
+            ['all', 'l', 'c', 'p'].forEach(f => document.getElementById('hubChip_' + f).classList.toggle('tab-active', hubFilter === f));
+
+            [...hubSelected].forEach(k => { if (!lookupProduct(k)) hubSelected.delete(k); });
+
+            let items = [];
+            if (hubFilter === 'all' || hubFilter === 'p') packs.forEach(item => items.push({ type: 'p', item }));
+            if (hubFilter === 'all' || hubFilter === 'l') liveries.forEach(item => items.push({ type: 'l', item }));
+            if (hubFilter === 'all' || hubFilter === 'c') clothing.forEach(item => items.push({ type: 'c', item }));
+            if (q) {
+                items = items.filter(({ type, item }) => {
+                    let hay;
+                    if (type === 'p') hay = item.title + ' ' + resolvePack(item).map(e => e.item.title).join(' ');
+                    else if (type === 'l') hay = [item.title, item.vehicleColor].concat((item.codes || []).map(c => c.name + ' ' + c.code)).join(' ');
+                    else hay = [item.title, item.shirtId, item.pantsId].join(' ');
+                    return hay.toLowerCase().includes(q);
+                });
+            }
+
+            const grid = document.getElementById('hubGrid');
+            const empty = document.getElementById('hubEmpty');
+            if (!items.length) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden'); empty.classList.add('flex');
+                updateSelectionBar();
+                return;
+            }
+            empty.classList.add('hidden'); empty.classList.remove('flex');
+
+            const chip = 'inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-300 bg-zinc-800/80 border border-zinc-700 px-2 py-0.5 rounded-full';
+            grid.innerHTML = items.map(({ type, item }) => {
+                if (type === 'p') {
+                    const es = resolvePack(item);
+                    const th = es.slice(0, 4);
+                    let pv;
+                    if (th.length <= 1) {
+                        pv = `<div class="w-full h-full flex items-center justify-center bg-zinc-950">${th[0] ? thumbHtml(th[0].type, th[0].item) : '<i class="fa-solid fa-boxes-stacked text-4xl text-zinc-700"></i>'}</div>`;
+                    } else {
+                        pv = `<div class="grid grid-cols-2 gap-px bg-zinc-800 w-full h-full">${th.map(e => `<div class="bg-zinc-950 flex items-center justify-center overflow-hidden">${thumbHtml(e.type, e.item)}</div>`).join('')}${th.length === 3 ? '<div class="bg-zinc-950"></div>' : ''}</div>`;
+                    }
+                    return `
+                        <div onclick="openPack('${item.id}')" class="group cursor-pointer bg-zinc-900/90 border border-zinc-700 rounded-2xl overflow-hidden shadow-2xl hover:border-zinc-400 hover:-translate-y-0.5 transition-all backdrop-blur-sm flex flex-col">
+                            <div class="h-44 bg-zinc-950 overflow-hidden">${pv}</div>
+                            <div class="p-4 flex-grow flex flex-col gap-3">
+                                <h3 class="text-base font-bold text-white truncate">${escapeHtml(item.title)}</h3>
+                                <div class="flex items-center justify-between">
+                                    <span class="${chip}"><i class="fa-solid fa-boxes-stacked text-[9px]"></i>Pack</span>
+                                    <span class="text-xs text-zinc-500">${es.length} producten</span>
+                                </div>
+                                <div class="pt-3 border-t border-zinc-800 text-xs font-medium text-zinc-300 group-hover:text-white flex items-center justify-between transition-colors">
+                                    <span>Bekijk pack</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+                const isL = type === 'l';
+                const key = keyOf(type, item.id);
+                const sel = hubSelected.has(key);
+                let preview;
+                if (isL) {
+                    preview = item.photo
+                        ? `<img src="${escapeHtml(item.photo)}" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.remove()">`
+                        : `<i class="fa-solid fa-car-side text-4xl text-zinc-700"></i>`;
+                } else if (item.shirtImg || item.pantsImg) {
+                    const t = src => `<div class="checker h-full flex items-center justify-center p-2">${src ? `<img src="${src}" alt="" class="max-w-full max-h-full object-contain">` : ''}</div>`;
+                    preview = `<div class="grid grid-cols-2 gap-px bg-zinc-800 w-full h-full">${t(item.shirtImg)}${t(item.pantsImg)}</div>`;
+                } else {
+                    preview = `<i class="fa-solid fa-shirt text-4xl text-zinc-700"></i>`;
+                }
+                const meta = isL ? `${(item.codes || []).length} codes` : '2 ID’s';
+                const color = isL && item.vehicleColor
+                    ? `<span class="${chip}"><span class="w-2.5 h-2.5 rounded-full border border-white/25" style="background-color:${escapeHtml(item.vehicleColor)}"></span></span>` : '';
+                return `
+                    <div onclick="openProduct('${key}')" class="group cursor-pointer bg-zinc-900/90 border ${sel ? 'border-white ring-2 ring-white/60' : 'border-zinc-800 hover:border-zinc-500'} rounded-2xl overflow-hidden shadow-2xl hover:-translate-y-0.5 transition-all backdrop-blur-sm flex flex-col">
+                        <div class="relative h-44 bg-zinc-950 overflow-hidden flex items-center justify-center">
+                            ${preview}
+                            <button type="button" onclick="toggleSelect('${key}', event)" title="${sel ? 'Deselecteer' : 'Selecteer voor pack'}"
+                                class="absolute top-3 left-3 w-7 h-7 rounded-lg border flex items-center justify-center cursor-pointer transition-colors ${sel ? 'bg-white border-white text-zinc-950' : 'bg-black/60 border-white/30 text-transparent hover:text-white hover:border-white'}">
+                                <i class="fa-solid fa-check text-xs"></i>
+                            </button>
+                        </div>
+                        <div class="p-4 flex-grow flex flex-col gap-3">
+                            <h3 class="text-base font-bold text-white truncate">${escapeHtml(item.title)}</h3>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="${chip}"><i class="fa-solid ${isL ? 'fa-car-side' : 'fa-shirt'} text-[9px]"></i>${isL ? 'Livery' : 'Uniform'}</span>
+                                    ${color}
+                                </div>
+                                <span class="text-xs text-zinc-500">${meta}</span>
+                            </div>
+                            <div class="pt-3 border-t border-zinc-800 text-xs font-medium text-zinc-300 group-hover:text-white flex items-center justify-between transition-colors">
+                                <span>Bekijk preview & codes</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+            updateSelectionBar();
+        }
+
+        // ---------- Pack modal ----------
+        function openPackModal(pack = null, preselected = []) {
+            document.getElementById('packId').value = pack ? pack.id : '';
+            document.getElementById('packNameInput').value = pack ? pack.title : '';
+            document.getElementById('packModalTitle').querySelector('span').textContent = pack ? 'Pack Bewerken' : 'Nieuw Pack';
+            const chosen = new Set(pack ? (pack.items || []).map(r => keyOf(r.type, r.id)) : preselected);
+            const all = [...liveries.map(item => ({ type: 'l', item })), ...clothing.map(item => ({ type: 'c', item }))];
+            document.getElementById('packChecklist').innerHTML = all.length ? all.map(({ type, item }) => {
+                const k = keyOf(type, item.id);
+                return `<label class="flex items-center gap-3 bg-zinc-950 border border-zinc-800 hover:border-zinc-600 rounded-xl px-3 py-2.5 cursor-pointer transition-colors">
+                    <input type="checkbox" class="pack-check w-4 h-4 accent-white shrink-0" value="${k}" ${chosen.has(k) ? 'checked' : ''} onchange="updatePackCount()">
+                    <span class="w-12 h-9 shrink-0 rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center">${thumbHtml(type, item, true)}</span>
+                    <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-white truncate">${escapeHtml(item.title)}</span><span class="block text-[11px] text-zinc-500">${type === 'l' ? 'Livery' : 'Uniform'}</span></span>
+                </label>`;
+            }).join('') : '<p class="text-xs text-zinc-500 italic">Nog geen producten. Voeg eerst liveries of uniforms toe.</p>';
+            updatePackCount();
+            showOverlay(document.getElementById('packModal'));
+        }
+        function closePackModal() { hideOverlay(document.getElementById('packModal')); }
+        function updatePackCount() {
+            document.getElementById('packCount').textContent = document.querySelectorAll('#packChecklist .pack-check:checked').length;
+        }
+        function openPackFromSelection() { openPackModal(null, [...hubSelected]); }
+
+        function savePack() {
+            const id = document.getElementById('packId').value;
+            const title = document.getElementById('packNameInput').value.trim();
+            if (!title) { showToast('Geef je pack een naam.', 'error'); document.getElementById('packNameInput').focus(); return; }
+            const items = [...document.querySelectorAll('#packChecklist .pack-check:checked')].map(cb => {
+                const [type, pid] = cb.value.split(':');
+                const found = lookupProduct(cb.value);
+                return { type, id: found ? found.item.id : pid };
+            });
+            if (!items.length) { showToast('Selecteer minstens één product.', 'error'); return; }
+            const data = { id: id ? parseInt(id) : Date.now(), title, items, updatedAt: new Date().toLocaleDateString('nl-NL') };
+            if (id) {
+                const i = packs.findIndex(p => String(p.id) === String(id));
+                if (i !== -1) packs[i] = data;
+                if (currentProduct && currentProduct.type === 'p' && String(currentProduct.item.id) === String(id)) currentProduct = { type: 'p', item: data };
+                showToast('Pack bijgewerkt!', 'success');
+            } else {
+                packs.unshift(data);
+                showToast('Pack aangemaakt!', 'success');
+            }
+            hubSelected.clear();
+            saveToLocalStorage();
+            closePackModal();
+            if (!document.getElementById('hubDetail').classList.contains('hidden')) renderProductView(); else renderHub();
+        }
+
+        function openPack(id) {
+            const pack = packs.find(p => String(p.id) === String(id));
+            if (!pack) return;
+            currentProduct = { type: 'p', item: pack };
+            showHubDetail();
+            renderProductView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        function editCurrentPack() { if (currentProduct && currentProduct.type === 'p') openPackModal(currentProduct.item); }
+        function deleteCurrentPack() {
+            if (!currentProduct || currentProduct.type !== 'p') return;
+            if (!confirm('Weet je zeker dat je dit pack wilt verwijderen? De producten zelf blijven bestaan.')) return;
+            packs = packs.filter(p => String(p.id) !== String(currentProduct.item.id));
+            currentProduct = null;
+            saveToLocalStorage();
+            showToast('Pack verwijderd.', 'info');
+            showHubList();
+        }
+
+        // ---------- Product weergave ----------
+        function entriesFor(type, item) {
+            return type === 'l'
+                ? (item.codes || []).map(c => [c.name, c.code])
+                : [['Shirt ID', item.shirtId], ['Broek ID', item.pantsId]];
+        }
+        function previewHtml(type, it) {
+            if (type === 'l') {
+                return it.photo ? `<div class="mb-4 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-zoom-in" onclick="openLightbox(this.querySelector('img').src)"><img src="${escapeHtml(it.photo)}" alt="Preview" class="w-full max-h-[300px] object-contain" onerror="this.closest('div').remove()"></div>` : '';
+            }
+            if (!(it.shirtImg || it.pantsImg)) return '';
+            const tile = (src, label) => `<div class="relative h-48 checker rounded-2xl border border-zinc-800 overflow-hidden flex items-center justify-center p-3 ${src ? 'cursor-zoom-in' : ''}" ${src ? `onclick="openLightbox(this.querySelector('img').src)"` : ''}>${src ? `<img src="${src}" alt="${label}" class="max-w-full max-h-full object-contain">` : '<span class="text-xs text-zinc-600">Geen PNG</span>'}<span class="absolute bottom-2 left-2 text-[11px] font-medium bg-black/70 px-2.5 py-1 rounded-lg border border-white/10 text-zinc-200">${label}</span></div>`;
+            return `<div class="mb-4 grid grid-cols-2 gap-3">${tile(it.shirtImg, 'Shirt')}${tile(it.pantsImg, 'Broek')}</div>`;
+        }
+        function rowsHtml(type, it) {
+            const es = entriesFor(type, it);
+            if (!es.length) return '<p class="text-xs text-zinc-500 italic">Geen codes</p>';
+            return '<div class="space-y-2.5">' + es.map(([label, value], i) => `
+                <button type="button" data-code="${escapeHtml(value || '')}" onclick="copyToClipboard(this.dataset.code, this)"
+                    class="group w-full flex items-center justify-between gap-3 bg-zinc-950 hover:bg-black px-4 py-3.5 rounded-xl border border-zinc-800 hover:border-zinc-600 transition-colors text-left cursor-pointer">
+                    <span class="flex items-center gap-3 min-w-0">
+                        <span class="w-6 h-6 shrink-0 rounded-lg bg-zinc-800 text-zinc-400 text-xs font-semibold flex items-center justify-center">${i + 1}</span>
+                        <span class="text-sm font-medium text-zinc-300 truncate">${escapeHtml(label || 'Onderdeel')}</span>
+                    </span>
+                    <span class="flex items-center gap-3 shrink-0">
+                        <code class="text-base font-mono font-semibold text-white tracking-wide">${escapeHtml(value || 'Geen code')}</code>
+                        <i class="fa-regular fa-copy text-xs text-zinc-500 group-hover:text-white transition-colors"></i>
+                    </span>
+                </button>`).join('') + '</div>';
+        }
+
+        function renderPackView() {
+            const card = document.getElementById('productCard');
+            const pack = currentProduct.item;
+            const entries = packEntries(currentProduct);
+            document.getElementById('packActions').style.display = (!customerMode && !pack.snapshot) ? 'flex' : 'none';
+            const chip = 'inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 bg-zinc-800/80 border border-zinc-700 px-2.5 py-1 rounded-full';
+            const header = `
+                <div class="px-6 pt-6 pb-5">
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="${chip}"><i class="fa-solid fa-boxes-stacked text-[10px]"></i>Pack</span>
+                        <span class="${chip}">${entries.length} producten</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white leading-tight">${escapeHtml(pack.title || 'Pack')}</h3>
+                </div>`;
+            const sections = entries.length ? entries.map(({ type, item: it }, i) => `
+                <div class="px-6 pb-6 ${i ? 'pt-6 border-t border-zinc-800' : ''}">
+                    <div class="flex items-center gap-2 mb-4 min-w-0">
+                        <span class="${chip} shrink-0"><i class="fa-solid ${type === 'l' ? 'fa-car-side' : 'fa-shirt'} text-[10px]"></i>${type === 'l' ? 'Livery' : 'Uniform'}</span>
+                        <h4 class="text-lg font-bold text-white truncate">${escapeHtml(it.title)}</h4>
+                    </div>
+                    ${previewHtml(type, it)}
+                    ${rowsHtml(type, it)}
+                </div>`).join('') : '<p class="px-6 pb-6 text-sm text-zinc-500">Dit pack bevat geen producten meer.</p>';
+            card.innerHTML = header + sections;
+        }
+
+        function hasDataImage(p) {
+            const isData = s => s && String(s).startsWith('data:');
+            if (p.type === 'p') return packEntries(p).some(hasDataImage);
+            const i = p.item;
+            return [i.photo, i.shirtImg, i.pantsImg].some(isData);
+        }
+
+        function selectProduct(val) {
+            currentProduct = null;
+            if (val) {
+                const [type, rawId] = val.split(':');
+                const item = (type === 'l' ? liveries : clothing).find(x => String(x.id) === rawId);
+                if (item) currentProduct = { type, item };
+            }
+            renderProductView();
+        }
+
+        function renderProductView() {
+            const card = document.getElementById('productCard');
+            if (!currentProduct) {
+                card.innerHTML = `<div class="p-10 text-center text-sm text-zinc-400"><i class="fa-solid fa-box-open text-4xl text-zinc-600 mb-3 block"></i>Geen product geselecteerd. Voeg eerst een livery of uniform toe.</div>`;
+                return;
+            }
+            document.getElementById('packActions').style.display = 'none';
+            if (currentProduct.type === 'p') { renderPackView(); return; }
+            const { type, item } = currentProduct;
+            const isL = type === 'l';
+            const chip = 'inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300 bg-zinc-800/80 border border-zinc-700 px-2.5 py-1 rounded-full';
+            const color = isL ? (item.vehicleColor || '') : '';
+
+            const header = `
+                <div class="px-6 pt-6 pb-5">
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="${chip}"><i class="fa-solid ${isL ? 'fa-car-side' : 'fa-shirt'} text-[10px]"></i>${isL ? 'Livery' : 'Uniform'}</span>
+                        ${color ? `<span class="${chip}"><span class="w-3 h-3 rounded-full border border-white/25" style="background-color:${escapeHtml(color)}"></span><span class="font-mono">${escapeHtml(color)}</span></span>` : ''}
+                    </div>
+                    <h3 class="text-2xl font-bold text-white leading-tight">${escapeHtml(item.title || 'Product')}</h3>
+                </div>`;
+
+            let preview = '';
+            if (isL) {
+                if (item.photo) {
+                    preview = `<div class="mx-6 mb-6 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-zoom-in" onclick="openLightbox(this.querySelector('img').src)">
+                        <img src="${escapeHtml(item.photo)}" alt="Preview" class="w-full max-h-[360px] object-contain" onerror="this.closest('div').remove()">
+                    </div>`;
+                }
+            } else if (item.shirtImg || item.pantsImg) {
+                const tile = (src, label) => `<div class="relative h-64 checker rounded-2xl border border-zinc-800 overflow-hidden flex items-center justify-center p-3 ${src ? 'cursor-zoom-in' : ''}" ${src ? `onclick="openLightbox(this.querySelector('img').src)"` : ''}>
+                        ${src ? `<img src="${src}" alt="${label}" class="max-w-full max-h-full object-contain">` : `<span class="text-xs text-zinc-600">Geen PNG</span>`}
+                        <span class="absolute bottom-2 left-2 text-[11px] font-medium bg-black/70 px-2.5 py-1 rounded-lg border border-white/10 text-zinc-200">${label}</span>
+                    </div>`;
+                preview = `<div class="mx-6 mb-6 grid grid-cols-2 gap-3">${tile(item.shirtImg, 'Shirt')}${tile(item.pantsImg, 'Broek')}</div>`;
+            }
+
+            card.innerHTML = `${header}${preview}
+                <div class="px-6 pb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">${isL ? 'Livery codes' : 'Uniform ID’s'}</span>
+                        <span class="text-xs text-zinc-500">Tik op een code om te kopiëren</span>
+                    </div>
+                    ${rowsHtml(type, item)}
+                </div>`;
+        }
+
+        function copyAllCodes() {
+            if (!currentProduct) return;
+            const fmt = (type, item) => entriesFor(type, item).map(([n, c]) => `${n}: ${c || '-'}`).join('\n');
+            let text;
+            if (currentProduct.type === 'p') text = packEntries(currentProduct).map(e => `# ${e.item.title}\n${fmt(e.type, e.item)}`).join('\n\n');
+            else text = fmt(currentProduct.type, currentProduct.item);
+            if (!text.trim()) { showToast('Geen codes om te kopiëren.', 'error'); return; }
+            copyToClipboard(text, null);
+        }
+
+        function openLightbox(src) {
+            if (!src) return;
+            const o = document.createElement('div');
+            o.className = 'fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out';
+            o.onclick = () => o.remove();
+            const i = document.createElement('img');
+            i.src = src;
+            i.className = 'max-w-full max-h-full object-contain rounded-xl';
+            o.appendChild(i);
+            document.body.appendChild(o);
+        }
+
+        // ---------- Klantlink ----------
+        function b64urlEncode(bytes) { return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); }
+        function b64urlDecode(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return base64ToBytes(s); }
+
+        async function streamBytes(bytes, stream) {
+            const w = stream.writable.getWriter();
+            w.write(bytes); w.close();
+            return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+        }
+
+        function productPayload(p) {
+            if (p.type === 'p') return { t: 'p', title: p.item.title, items: packEntries(p).map(e => productPayload(e)) };
+            const i = p.item;
+            const keep = s => (s && !String(s).startsWith('data:')) ? s : '';   // alleen URL-afbeeldingen, geen base64
+            if (p.type === 'l') return { t: 'l', title: i.title, c: i.vehicleColor || '', p: keep(i.photo), codes: i.codes || [] };
+            return { t: 'c', title: i.title, s: i.shirtId || '', b: i.pantsId || '', si: keep(i.shirtImg), bi: keep(i.pantsImg) };
+        }
+        function payloadToProduct(d) {
+            if (d.t === 'p') return { type: 'p', item: { title: String(d.title || ''), snapshot: true, items: (Array.isArray(d.items) ? d.items : []).map(x => payloadToProduct(x)) } };
+            if (d.t === 'l') return { type: 'l', item: { title: String(d.title || ''), vehicleColor: d.c || '', photo: d.p || '', codes: Array.isArray(d.codes) ? d.codes.map(c => ({ name: String(c.name || ''), code: String(c.code || '') })) : [] } };
+            return { type: 'c', item: { title: String(d.title || ''), shirtId: String(d.s || ''), pantsId: String(d.b || ''), shirtImg: d.si || '', pantsImg: d.bi || '' } };
+        }
+
+        async function copyProductLink() {
+            if (!currentProduct) { showToast('Geen product geselecteerd.', 'error'); return; }
+            try {
+                const raw = new TextEncoder().encode(JSON.stringify(productPayload(currentProduct)));
+                let token;
+                if (window.CompressionStream) token = 'z.' + b64urlEncode(await streamBytes(raw, new CompressionStream('gzip')));
+                else token = 'p.' + b64urlEncode(raw);
+                const url = location.href.split('#')[0] + '#product=' + token;
+                const dropped = hasDataImage(currentProduct);
+                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(url);
+                else { const ta = document.createElement('textarea'); ta.value = url; ta.style.position = 'fixed'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+                showToast(dropped ? 'Klantlink gekopieerd. Geüploade afbeeldingen zitten niet in de link (gebruik een afbeeldings-URL).' : 'Klantlink gekopieerd!', dropped ? 'info' : 'success');
+            } catch (e) {
+                console.error(e);
+                showToast('Link maken mislukt.', 'error');
+            }
+        }
+
+        async function initFromHash() {
+            const m = location.hash.match(/^#product=(z|p)\.(.+)$/);
+            if (!m) return;
+            try {
+                let bytes = b64urlDecode(m[2]);
+                if (m[1] === 'z') {
+                    if (!window.DecompressionStream) throw new Error('Browser ondersteunt dit linktype niet.');
+                    bytes = await streamBytes(bytes, new DecompressionStream('gzip'));
+                }
+                const decoded = JSON.parse(new TextDecoder().decode(bytes));
+                currentProduct = payloadToProduct(decoded);
+                customerMode = true;
+                document.body.classList.add('customer-mode');
+                switchView('product');
+            } catch (e) {
+                console.error(e);
+                showToast('Deze productlink is ongeldig of beschadigd.', 'error');
+            }
+        }
+        window.addEventListener('hashchange', initFromHash);
+
+        // ---------- Clipboard ----------
+        function copyToClipboard(text, btnElement) {
+            if (!text) { showToast('Niets om te kopiëren.', 'error'); return; }
+            const textArea = document.createElement('textarea');
             textArea.value = text;
-            textArea.style.position = "fixed";
+            textArea.style.position = 'fixed';
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    showToast("Code gekopieerd naar klembord!", "success");
-                    if (btnElement) {
-                        const icon = btnElement.querySelector('i');
-                        icon.className = "fa-solid fa-check text-xs text-green-400";
-                        setTimeout(() => {
-                            icon.className = "fa-regular fa-copy text-xs";
-                        }, 2000);
+                    showToast('Gekopieerd naar klembord!', 'success');
+                    const icon = btnElement && btnElement.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fa-solid fa-check text-xs text-green-400';
+                        setTimeout(() => { icon.className = 'fa-regular fa-copy text-xs'; }, 2000);
                     }
                 } else {
-                    showToast("Kopiëren mislukt.", "error");
+                    showToast('Kopiëren mislukt.', 'error');
                 }
             } catch (err) {
                 console.error('Kon tekst niet kopiëren', err);
-                showToast("Kopiëren mislukt.", "error");
+                showToast('Kopiëren mislukt.', 'error');
             }
-
             document.body.removeChild(textArea);
         }
-
         function copySingleCode(btn) {
             const row = btn.closest('div.flex');
-            const codeInput = row.querySelector('.code-value');
-            copyToClipboard(codeInput.value, btn);
+            copyToClipboard(row.querySelector('.code-value').value, btn);
         }
 
-        // Toast Notification System
+        // ---------- Toasts ----------
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            
-            let bgClass = 'bg-zinc-900 border-zinc-700 text-white shadow-2xl';
             let icon = 'fa-circle-check text-green-400';
-            
-            if (type === 'error') {
-                icon = 'fa-circle-exclamation text-red-400';
-            } else if (type === 'info') {
-                icon = 'fa-circle-info text-zinc-300';
-            }
-
-            toast.className = `pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl border ${bgClass} transform translate-y-2 opacity-0 transition-all duration-300`;
-            toast.innerHTML = `
-                <i class="fa-solid ${icon} text-lg"></i>
-                <span class="text-sm font-medium">${escapeHtml(message)}</span>
-            `;
-
+            if (type === 'error') icon = 'fa-circle-exclamation text-red-400';
+            else if (type === 'info') icon = 'fa-circle-info text-zinc-300';
+            toast.className = 'pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl border bg-zinc-900 border-zinc-700 text-white shadow-2xl transform translate-y-2 opacity-0 transition-all duration-300';
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span class="text-sm font-medium">${escapeHtml(message)}</span>`;
             container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-2', 'opacity-0');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Utility to prevent XSS
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/&/g, "&amp;")
-                      .replace(/</g, "&lt;")
-                      .replace(/>/g, "&gt;")
-                      .replace(/"/g, "&quot;")
-                      .replace(/'/g, "&#039;");
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
     </script>
 </body>
